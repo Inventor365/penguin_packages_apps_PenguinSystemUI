@@ -9,4 +9,7 @@
     <string name="volume_panel_collapse">Show only the current volume slider</string>
     <!-- Header of the One UI volume panel style -->
     <string name="volume_panel_oneui_title">Volume</string>
+    <!-- MyUI volume panel style -->
+    <string name="volume_panel_myui_title">Sound &amp; vibration</string>
+    <string name="volume_panel_myui_done">Done</string>
 </resources>
