@@ -121,8 +121,12 @@ fun LockscreenExpandedMediaArt(alpha: () -> Float, modifier: Modifier = Modifier
         val density = LocalDensity.current
 
         Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = f }) {
-            Artwork(artwork, Modifier.fillMaxSize().blur(60.dp))
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
+            if (tallArt == null) {
+                Artwork(artwork, Modifier.fillMaxSize().blur(60.dp))
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
+            } else {
+                Box(Modifier.fillMaxSize().background(Color.Black))
+            }
             tallArt?.let {
                 MotionArtVideo(
                     it,
@@ -135,7 +139,18 @@ fun LockscreenExpandedMediaArt(alpha: () -> Float, modifier: Modifier = Modifier
                             drawContent()
                             drawRect(
                                 Brush.verticalGradient(
+                                    0f to Color.Transparent,
+                                    0.1f to Color.Black,
                                     0.7f to Color.Black,
+                                    1f to Color.Transparent,
+                                ),
+                                blendMode = BlendMode.DstIn,
+                            )
+                            drawRect(
+                                Brush.horizontalGradient(
+                                    0f to Color.Transparent,
+                                    0.08f to Color.Black,
+                                    0.92f to Color.Black,
                                     1f to Color.Transparent,
                                 ),
                                 blendMode = BlendMode.DstIn,

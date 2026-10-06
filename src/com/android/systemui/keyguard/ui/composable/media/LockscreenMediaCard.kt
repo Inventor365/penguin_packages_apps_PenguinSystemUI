@@ -83,6 +83,9 @@ import com.android.systemui.media.remedia.ui.viewmodel.MediaCardViewModel
 import com.android.systemui.media.remedia.ui.viewmodel.MediaNavigationViewModel
 import com.android.systemui.media.remedia.ui.viewmodel.MediaSecondaryActionViewModel
 import com.android.systemui.media.remedia.ui.viewmodel.MediaViewModel
+import com.android.systemui.qs.shared.style.LiquidGlassSurface
+import com.android.systemui.qs.shared.style.glassRim
+import com.android.systemui.qs.shared.style.liquidGlassEnabled
 import com.android.systemui.res.R
 
 private val CardCorner = 28.dp
@@ -92,7 +95,7 @@ private val ThumbnailCorner = 10.dp
 private val ControlSize = 44.dp
 private val TrackHeight = 6.dp
 private val CompactGlass = Color(0xFF3A3A3C).copy(alpha = 0.45f)
-private val ExpandedGlass = Color.White.copy(alpha = 0.14f)
+private val SmokyGlass = Color(0xFF1C1C1E).copy(alpha = 0.78f)
 private val CardBorder = Color.White.copy(alpha = 0.18f)
 private val Secondary = Color.White.copy(alpha = 0.6f)
 
@@ -138,6 +141,7 @@ private fun MediaCard(card: MediaCardViewModel, isSelected: Boolean) {
     val density = LocalDensity.current
     val fraction = { LockscreenMediaExpansion.fraction }
     val f = fraction()
+    val glass = liquidGlassEnabled()
     Expandable(
         controller = rememberExpandableController(color = Color.Transparent, shape = RoundedCornerShape(CardCorner)),
         useModifierBasedImplementation = true,
@@ -146,7 +150,10 @@ private fun MediaCard(card: MediaCardViewModel, isSelected: Boolean) {
         Box(
             Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(CardCorner))
-                .border(1.dp, CardBorder, RoundedCornerShape(CardCorner))
+                .then(
+                    if (glass) Modifier
+                    else Modifier.border(1.dp, CardBorder, RoundedCornerShape(CardCorner))
+                )
         ) {
         WallpaperBlur(
             alpha = {
@@ -156,7 +163,13 @@ private fun MediaCard(card: MediaCardViewModel, isSelected: Boolean) {
             corner = CardCorner,
             modifier = Modifier.matchParentSize(),
         )
-        Box(Modifier.matchParentSize().background(lerpColor(CompactGlass, ExpandedGlass, f)))
+        Box(
+            Modifier.matchParentSize()
+                .background(
+                    lerpColor(if (glass) LiquidGlassSurface else CompactGlass, SmokyGlass, f)
+                )
+                .glassRim(RoundedCornerShape(CardCorner))
+        )
         Column(
             modifier =
                 Modifier.fillMaxWidth()
