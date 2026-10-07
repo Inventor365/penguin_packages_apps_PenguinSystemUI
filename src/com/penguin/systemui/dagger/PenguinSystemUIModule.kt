@@ -8,7 +8,9 @@ package com.penguin.systemui.dagger
 import android.content.Context
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.globalactions.IosPowerMenuLayout
+import com.android.systemui.keyguard.ui.composable.media.ExpandableLockscreenPlayer
 import com.android.systemui.penguin.DepthSubject
+import com.android.systemui.penguin.LockscreenPlayer
 import com.android.systemui.penguin.PowerMenuLayout
 import com.android.systemui.penguin.StatusBarIsland
 import com.android.systemui.penguin.VolumePanelLooks
@@ -29,6 +31,8 @@ interface PenguinSystemUIModule {
     @Binds fun volumePanelLooks(impl: StyledVolumePanelLooks): VolumePanelLooks
 
     @Binds fun statusBarIsland(impl: DynamicIsland): StatusBarIsland
+
+    @Binds fun lockscreenPlayer(impl: ExpandableLockscreenPlayer): LockscreenPlayer
 
     companion object {
         @Provides
