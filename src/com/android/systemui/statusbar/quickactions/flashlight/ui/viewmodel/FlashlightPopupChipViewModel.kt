@@ -42,6 +42,7 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.combine
+import com.penguin.systemui.R as PenguinR
 import kotlinx.coroutines.flow.callbackFlow
 
 /** ViewModel backing the flashlight page inside the dynamic island. */
@@ -126,12 +127,12 @@ constructor(
                     ChipIcon(
                         icon =
                             Icon.Resource(
-                                resId = R.drawable.ic_dynamic_island_flashlight,
+                                resId = PenguinR.drawable.ic_dynamic_island_flashlight,
                                 contentDescription = contentDescription,
                             ),
                     )
                 ),
-            chipText = context.getString(R.string.dynamic_island_flashlight_short),
+            chipText = context.getString(PenguinR.string.dynamic_island_flashlight_short),
             colors = ColorsModel.DynamicIsland,
             contentDescription = contentDescription.loadContentDescription(context),
             popupContent =

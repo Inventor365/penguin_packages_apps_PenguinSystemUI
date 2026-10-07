@@ -54,6 +54,7 @@ import com.android.systemui.statusbar.quickactions.popups.shared.model.PopupActi
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.IslandAccents
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.IslandGlyphBadge
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.PopupActionChips
+import com.penguin.systemui.R as PenguinR
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.PopupSurface
 
 private val PopupShape = RoundedCornerShape(32.dp)
@@ -83,7 +84,7 @@ fun FlashlightPopup(
                     StatusBarIcon(
                         icon =
                             Icon.Resource(
-                                resId = R.drawable.ic_dynamic_island_flashlight,
+                                resId = PenguinR.drawable.ic_dynamic_island_flashlight,
                                 contentDescription =
                                     ContentDescription.Resource(
                                         R.string.quick_settings_flashlight_label
@@ -105,7 +106,7 @@ fun FlashlightPopup(
                     ) {
                         Box(modifier = Modifier.size(6.dp).background(accent, CircleShape))
                         Text(
-                            text = stringResource(R.string.dynamic_island_flashlight_enabled),
+                            text = stringResource(PenguinR.string.dynamic_island_flashlight_enabled),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = accent,

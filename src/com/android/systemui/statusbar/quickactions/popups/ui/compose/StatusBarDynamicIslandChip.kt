@@ -91,6 +91,7 @@ import com.android.systemui.statusbar.quickactions.screenrecord.shared.model.Scr
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.drop
+import com.penguin.systemui.R as PenguinR
 import kotlinx.coroutines.launch
 
 /** Single centered status bar capsule styled like a compact dynamic island. */
@@ -501,7 +502,7 @@ private fun ChargingChipGlyph(pulse: Boolean, modifier: Modifier = Modifier) {
         animatedAlpha
     } else 1f
     Icon(
-        icon = IconModel.Resource(R.drawable.dynamic_island_charging, null),
+        icon = IconModel.Resource(PenguinR.drawable.dynamic_island_charging, null),
         tint = IslandAccents.Battery,
         modifier = modifier.graphicsLayer { this.alpha = alpha },
     )

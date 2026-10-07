@@ -59,6 +59,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flatMapLatest
+import com.penguin.systemui.R as PenguinR
 import kotlinx.coroutines.flow.flow
 
 /** ViewModel backing stopwatch notifications inside the dynamic island. */
@@ -197,13 +198,13 @@ private fun NotificationEntry.toStopwatchModel(
     val appLabel = resolveAppLabel(context, sbn.packageName)
     val fallbackIcon =
         Icon.Resource(
-            resId = R.drawable.ic_dynamic_island_stopwatch,
-            contentDescription = ContentDescription.Resource(R.string.dynamic_island_stopwatch_title),
+            resId = PenguinR.drawable.ic_dynamic_island_stopwatch,
+            contentDescription = ContentDescription.Resource(PenguinR.string.dynamic_island_stopwatch_title),
         )
 
     return StopwatchPopupModel(
         icon = fallbackIcon,
-        title = context.getString(R.string.dynamic_island_stopwatch_title),
+        title = context.getString(PenguinR.string.dynamic_island_stopwatch_title),
         subtitle = appLabel.takeUnless { it.isBlank() },
         baseElapsedRealtimeMs = chronometer.baseElapsedRealtimeMs,
         isRunning = isRunning(notification),
@@ -340,18 +341,18 @@ private fun Notification.toStopwatchActions(context: Context): List<PopupActionM
                 add(PopupActionModel(context.getString(R.string.controls_media_button_pause), it))
             }
             actions.getOrNull(1)?.actionIntent?.toSendAction()?.let {
-                add(PopupActionModel(context.getString(R.string.dynamic_island_action_lap), it))
+                add(PopupActionModel(context.getString(PenguinR.string.dynamic_island_action_lap), it))
             }
         }
     } else {
         buildList {
             actions.getOrNull(0)?.actionIntent?.toSendAction()?.let {
-                add(PopupActionModel(context.getString(R.string.dynamic_island_action_resume), it))
+                add(PopupActionModel(context.getString(PenguinR.string.dynamic_island_action_resume), it))
             }
             actions.getOrNull(1)?.actionIntent?.toSendAction()?.let {
                 add(
                     PopupActionModel(
-                        context.getString(R.string.dynamic_island_action_stop),
+                        context.getString(PenguinR.string.dynamic_island_action_stop),
                         it,
                         emphasized = true,
                     )

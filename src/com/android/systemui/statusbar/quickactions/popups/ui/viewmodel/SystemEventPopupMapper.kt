@@ -29,6 +29,7 @@ import com.android.systemui.statusbar.quickactions.popups.ui.model.PopupChipMode
 import com.android.systemui.statusbar.quickactions.popups.ui.model.PopupContentModel
 import com.android.systemui.statusbar.quickactions.popups.ui.model.SystemEventKind
 import com.android.systemui.statusbar.policy.KeyguardStateController
+import com.penguin.systemui.R as PenguinR
 import javax.inject.Inject
 
 /** Presentation adapter owned by featurepods; shares no AxDynamicBar rendering code. */
@@ -59,7 +60,7 @@ class SystemEventPopupMapper @Inject constructor(
             if (currentMa > 0f) {
                 val useAmps = currentMa >= 1000f
                 add(ChargingDetailModel(
-                    label = context.getString(R.string.dynamic_island_charging_current),
+                    label = context.getString(PenguinR.string.dynamic_island_charging_current),
                     value = String.format(locale, if (useAmps) "%.1f" else "%.0f",
                         if (useAmps) currentMa / 1000f else currentMa),
                     unit = if (useAmps) "A" else "mA",
@@ -67,21 +68,21 @@ class SystemEventPopupMapper @Inject constructor(
             }
             if (status.maxChargingWattage > 0f && voltage > 0) {
                 add(ChargingDetailModel(
-                    label = context.getString(R.string.dynamic_island_charging_power),
+                    label = context.getString(PenguinR.string.dynamic_island_charging_power),
                     value = String.format(locale, "%.1f", status.maxChargingWattage / divider / 1000f),
                     unit = "W",
                 ))
             }
             if (voltage > 0) {
                 add(ChargingDetailModel(
-                    label = context.getString(R.string.dynamic_island_charging_voltage),
+                    label = context.getString(PenguinR.string.dynamic_island_charging_voltage),
                     value = String.format(locale, "%.1f", status.maxChargingVoltage / 1000000f),
                     unit = "V",
                 ))
             }
             if (status.temperature > 0f) {
                 add(ChargingDetailModel(
-                    label = context.getString(R.string.dynamic_island_charging_temperature),
+                    label = context.getString(PenguinR.string.dynamic_island_charging_temperature),
                     value = String.format(locale, "%.1f", status.temperature / 10f),
                     unit = "°C",
                 ))
@@ -137,24 +138,24 @@ class SystemEventPopupMapper @Inject constructor(
         fun open(intent: PendingIntent?) {
             intent.toActivityLaunchAction(activityStarter, activityIntentHelper,
                 lockscreenUserManager, keyguardStateController)?.let {
-                actions += PopupActionModel(context.getString(R.string.dynamic_island_event_open), it)
+                actions += PopupActionModel(context.getString(PenguinR.string.dynamic_island_event_open), it)
             }
         }
         val (title, text) = when (event) {
             is IslandEvent.Charging -> {
-                iconRes = R.drawable.dynamic_island_charging
+                iconRes = PenguinR.drawable.dynamic_island_charging
                 prominentText = "${event.level}%"
                 pulse = event.isCharging
                 progress = event.level / 100f
-                context.getString(if (event.isWireless) R.string.dynamic_island_event_wireless_charging
-                    else R.string.dynamic_island_event_charging) to
+                context.getString(if (event.isWireless) PenguinR.string.dynamic_island_event_wireless_charging
+                    else PenguinR.string.dynamic_island_event_charging) to
                     listOfNotNull(event.timeRemaining,
-                        context.getString(R.string.dynamic_island_event_battery_saver).takeIf { event.isPowerSave })
+                        context.getString(PenguinR.string.dynamic_island_event_battery_saver).takeIf { event.isPowerSave })
                         .joinToString(" · ")
             }
             is IslandEvent.BiometricUnlock -> {
-                iconRes = R.drawable.dynamic_island_unlock
-                context.getString(R.string.dynamic_island_event_unlocked) to event.sourceName
+                iconRes = PenguinR.drawable.dynamic_island_unlock
+                context.getString(PenguinR.string.dynamic_island_event_unlocked) to event.sourceName
             }
             is IslandEvent.Bluetooth -> {
                 prominentText = "${event.batteryLevel}%".takeIf { event.batteryLevel >= 0 }
@@ -164,72 +165,72 @@ class SystemEventPopupMapper @Inject constructor(
                 bluetoothBatteries = listOfNotNull(
                     event.leftBatteryLevel?.takeIf { it in 0..100 }?.let {
                         BluetoothBatteryModel(
-                            label = context.getString(R.string.dynamic_island_bluetooth_left_earbud),
+                            label = context.getString(PenguinR.string.dynamic_island_bluetooth_left_earbud),
                             level = it,
                             component = BluetoothBatteryComponent.LeftEarbud,
                         )
                     },
                     event.rightBatteryLevel?.takeIf { it in 0..100 }?.let {
                         BluetoothBatteryModel(
-                            label = context.getString(R.string.dynamic_island_bluetooth_right_earbud),
+                            label = context.getString(PenguinR.string.dynamic_island_bluetooth_right_earbud),
                             level = it,
                             component = BluetoothBatteryComponent.RightEarbud,
                         )
                     },
                     event.caseBatteryLevel?.takeIf { it in 0..100 }?.let {
                         BluetoothBatteryModel(
-                            label = context.getString(R.string.dynamic_island_bluetooth_case),
+                            label = context.getString(PenguinR.string.dynamic_island_bluetooth_case),
                             level = it,
                             component = BluetoothBatteryComponent.Case,
                         )
                     },
                 )
-                iconRes = R.drawable.dynamic_island_headphones
+                iconRes = PenguinR.drawable.dynamic_island_headphones
                 if (event.address.isNotEmpty()) actions += PopupActionModel(
-                    context.getString(R.string.dynamic_island_event_disconnect), { disconnect(event.address) })
-                event.deviceName to event.deviceTypeLabel.ifBlank { context.getString(R.string.dynamic_island_event_connected) }
+                    context.getString(PenguinR.string.dynamic_island_event_disconnect), { disconnect(event.address) })
+                event.deviceName to event.deviceTypeLabel.ifBlank { context.getString(PenguinR.string.dynamic_island_event_connected) }
             }
             is IslandEvent.Hotspot -> {
-                iconRes = R.drawable.dynamic_island_hotspot
-                context.getString(R.string.dynamic_island_event_hotspot) to
-                    context.getString(R.string.dynamic_island_event_connected_devices, event.numDevices)
+                iconRes = PenguinR.drawable.dynamic_island_hotspot
+                context.getString(PenguinR.string.dynamic_island_event_hotspot) to
+                    context.getString(PenguinR.string.dynamic_island_event_connected_devices, event.numDevices)
             }
-            is IslandEvent.Vpn -> context.getString(R.string.dynamic_island_event_vpn) to
-                context.getString(if (event.isValidated) R.string.dynamic_island_event_connected
-                    else R.string.dynamic_island_event_connecting)
+            is IslandEvent.Vpn -> context.getString(PenguinR.string.dynamic_island_event_vpn) to
+                context.getString(if (event.isValidated) PenguinR.string.dynamic_island_event_connected
+                    else PenguinR.string.dynamic_island_event_connecting)
             is IslandEvent.RingerMode -> {
-                listOf(R.string.dynamic_island_event_ring to AudioManager.RINGER_MODE_NORMAL,
-                    R.string.dynamic_island_event_vibrate to AudioManager.RINGER_MODE_VIBRATE,
-                    R.string.dynamic_island_event_silent to AudioManager.RINGER_MODE_SILENT).forEach { (label, mode) ->
+                listOf(PenguinR.string.dynamic_island_event_ring to AudioManager.RINGER_MODE_NORMAL,
+                    PenguinR.string.dynamic_island_event_vibrate to AudioManager.RINGER_MODE_VIBRATE,
+                    PenguinR.string.dynamic_island_event_silent to AudioManager.RINGER_MODE_SILENT).forEach { (label, mode) ->
                     actions += PopupActionModel(context.getString(label), { setRinger(mode) }, emphasized = mode == event.mode)
                 }
                 iconRes = when (event.mode) {
-                    AudioManager.RINGER_MODE_VIBRATE -> R.drawable.dynamic_island_vibrate
-                    AudioManager.RINGER_MODE_SILENT -> R.drawable.dynamic_island_silent
-                    else -> R.drawable.dynamic_island_ringer
+                    AudioManager.RINGER_MODE_VIBRATE -> PenguinR.drawable.dynamic_island_vibrate
+                    AudioManager.RINGER_MODE_SILENT -> PenguinR.drawable.dynamic_island_silent
+                    else -> PenguinR.drawable.dynamic_island_ringer
                 }
                 context.getString(when (event.mode) {
-                    AudioManager.RINGER_MODE_VIBRATE -> R.string.dynamic_island_event_vibrate
-                    AudioManager.RINGER_MODE_SILENT -> R.string.dynamic_island_event_silent
-                    else -> R.string.dynamic_island_event_ring
+                    AudioManager.RINGER_MODE_VIBRATE -> PenguinR.string.dynamic_island_event_vibrate
+                    AudioManager.RINGER_MODE_SILENT -> PenguinR.string.dynamic_island_event_silent
+                    else -> PenguinR.string.dynamic_island_event_ring
                 }) to ""
             }
             is IslandEvent.Clipboard -> {
-                iconRes = R.drawable.dynamic_island_clipboard
-                context.getString(R.string.dynamic_island_event_clipboard) to event.preview
+                iconRes = PenguinR.drawable.dynamic_island_clipboard
+                context.getString(PenguinR.string.dynamic_island_event_clipboard) to event.preview
             }
             is IslandEvent.Call -> {
                 icon = event.callerPhoto ?: event.appIcon
                 iconRes = android.R.drawable.sym_action_call
                 notificationActions(event.actions)
                 open(event.sbn.notification.contentIntent)
-                (event.callerName ?: event.number ?: context.getString(R.string.dynamic_island_event_call)) to
+                (event.callerName ?: event.number ?: context.getString(PenguinR.string.dynamic_island_event_call)) to
                     (event.sbn.notification.extras.getCharSequence(android.app.Notification.EXTRA_TEXT)?.toString().orEmpty())
             }
             is IslandEvent.Notification -> {
                 appName = event.appName
                 chipDrawable = loadAppIcon(event.sbn)
-                iconRes = R.drawable.dynamic_island_notification
+                iconRes = PenguinR.drawable.dynamic_island_notification
                 image = event.notificationImage?.let { Icon.Loaded(it, null) }
                 indeterminate = event.isProgressIndeterminate
                 icon = event.senderIcon ?: event.appIcon
@@ -239,7 +240,7 @@ class SystemEventPopupMapper @Inject constructor(
                 (event.title ?: event.appName) to event.text.orEmpty()
             }
             is IslandEvent.PromotedOngoing -> {
-                iconRes = R.drawable.dynamic_island_notification
+                iconRes = PenguinR.drawable.dynamic_island_notification
                 appName = event.appName
                 chipDrawable = loadAppIcon(event.sbn)
                 indeterminate = event.isIndeterminate
@@ -254,18 +255,18 @@ class SystemEventPopupMapper @Inject constructor(
                 notificationActions(event.actions)
                 timerEndTimeMs = event.endTimeMs.takeIf { it > 0L }
                 timerPaused = event.isPaused
-                context.getString(R.string.dynamic_island_event_timer) to event.label
+                context.getString(PenguinR.string.dynamic_island_event_timer) to event.label
             }
             is IslandEvent.AudioRecording -> {
                 pulse = event.state == com.android.systemui.islandevents.model.RecordingState.RECORDING
                 prominentText = context.getString(when (event.state) {
-                    com.android.systemui.islandevents.model.RecordingState.RECORDING -> R.string.dynamic_island_event_recording
-                    com.android.systemui.islandevents.model.RecordingState.PAUSED -> R.string.dynamic_island_event_paused
-                    com.android.systemui.islandevents.model.RecordingState.SAVED -> R.string.dynamic_island_event_saved
+                    com.android.systemui.islandevents.model.RecordingState.RECORDING -> PenguinR.string.dynamic_island_event_recording
+                    com.android.systemui.islandevents.model.RecordingState.PAUSED -> PenguinR.string.dynamic_island_event_paused
+                    com.android.systemui.islandevents.model.RecordingState.SAVED -> PenguinR.string.dynamic_island_event_saved
                 })
                 icon = event.appIcon
                 notificationActions(event.actions)
-                context.getString(R.string.dynamic_island_event_recording) to event.appName
+                context.getString(PenguinR.string.dynamic_island_event_recording) to event.appName
             }
             is IslandEvent.NowPlaying -> {
                 icon = event.appIcon
@@ -276,21 +277,21 @@ class SystemEventPopupMapper @Inject constructor(
             is IslandEvent.AppSwitch -> {
                 val previous = event.previousApp ?: event.recentApps.firstOrNull() ?: return null
                 icon = previous.appIcon
-                iconRes = R.drawable.dynamic_island_recent_apps
+                iconRes = PenguinR.drawable.dynamic_island_recent_apps
                 event.recentApps.take(3).forEach { app ->
                     actions += PopupActionModel(app.appName, { switchApp(app.taskId) })
                 }
-                context.getString(R.string.dynamic_island_event_recent_apps) to previous.appName
+                context.getString(PenguinR.string.dynamic_island_event_recent_apps) to previous.appName
             }
             else -> return null
         }
         val compactIcon = when (event) {
-            is IslandEvent.Bluetooth -> Icon.Resource(R.drawable.dynamic_island_bluetooth, null)
+            is IslandEvent.Bluetooth -> Icon.Resource(PenguinR.drawable.dynamic_island_bluetooth, null)
             is IslandEvent.BiometricUnlock, is IslandEvent.Call,
             is IslandEvent.Hotspot, is IslandEvent.RingerMode, is IslandEvent.AppSwitch ->
                 Icon.Resource(iconRes, null)
             is IslandEvent.Notification -> if (progress == null && !indeterminate)
-                Icon.Resource(R.drawable.dynamic_island_notification, null)
+                Icon.Resource(PenguinR.drawable.dynamic_island_notification, null)
                 else (chipDrawable ?: icon)?.let { Icon.Loaded(it, null) } ?: Icon.Resource(iconRes, null)
             else -> (chipDrawable ?: icon)?.let { Icon.Loaded(it, null) } ?: Icon.Resource(iconRes, null)
         }

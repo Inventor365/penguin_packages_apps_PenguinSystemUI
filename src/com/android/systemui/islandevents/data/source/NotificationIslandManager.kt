@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.penguin.systemui.R as PenguinR
 import kotlinx.coroutines.launch
 
 open class NotificationIslandManager
@@ -644,7 +645,7 @@ constructor(
         actionLabels: List<String> = emptyList(),
         actionIntents: List<String> = emptyList(),
     ) {
-        val label = extras.getString("android.title") ?: context.getString(R.string.ax_dynamic_bar_timer)
+        val label = extras.getString("android.title") ?: context.getString(PenguinR.string.ax_dynamic_bar_timer)
         val icon =
             try {
                 context.packageManager.getApplicationIcon(sbn.packageName)
@@ -795,7 +796,7 @@ constructor(
     }
 
     private fun handleAlarm(sbn: StatusBarNotification, extras: Bundle) {
-        val label = extras.getString("android.title") ?: context.getString(R.string.ax_dynamic_bar_alarm)
+        val label = extras.getString("android.title") ?: context.getString(PenguinR.string.ax_dynamic_bar_alarm)
         val isRinging = sbn.notification.category == Notification.CATEGORY_ALARM
         val icon =
             try {

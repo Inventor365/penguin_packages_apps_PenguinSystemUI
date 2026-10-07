@@ -51,6 +51,7 @@ import com.android.systemui.statusbar.quickactions.popups.ui.compose.IslandAccen
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.IslandGlyphBadge
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.PopupActionChips
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.PopupSurface
+import com.penguin.systemui.R as PenguinR
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.pressScale
 
 private val PopupShape = RoundedCornerShape(32.dp)
@@ -92,7 +93,7 @@ fun AlarmPopup(
                     StatusBarIcon(
                         icon =
                             Icon.Resource(
-                                resId = R.drawable.ic_dynamic_island_alarm,
+                                resId = PenguinR.drawable.ic_dynamic_island_alarm,
                                 contentDescription =
                                     ContentDescription.Resource(R.string.status_bar_alarm),
                             ),
@@ -132,7 +133,7 @@ fun AlarmPopup(
                         model.onOpen?.let {
                             add(
                                 PopupActionModel(
-                                    label = stringResource(R.string.dynamic_island_open_clock_action),
+                                    label = stringResource(PenguinR.string.dynamic_island_open_clock_action),
                                     onClick = it,
                                 )
                             )

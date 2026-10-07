@@ -74,6 +74,7 @@ import com.android.systemui.statusbar.quickactions.dynamicisland.media.shared.mo
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.PopupSurface
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.pressScale
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.rememberAlbumArtAccent
+import com.penguin.systemui.R as PenguinR
 import kotlinx.coroutines.delay
 
 private val PopupShape = RoundedCornerShape(34.dp)
@@ -164,7 +165,7 @@ fun MediaControlPopup(
             ) {
                 MediaActionButton(
                     action = model.previousAction,
-                    iconOverrideId = R.drawable.ic_skip_previous_filled,
+                    iconOverrideId = PenguinR.drawable.ic_skip_previous_filled,
                     containerColor = LocalContentColor.current.copy(alpha = 0.11f),
                     iconTint = LocalContentColor.current,
                     buttonSize = 52.dp,
@@ -179,7 +180,7 @@ fun MediaControlPopup(
                 )
                 MediaActionButton(
                     action = model.nextAction,
-                    iconOverrideId = R.drawable.ic_skip_next_filled,
+                    iconOverrideId = PenguinR.drawable.ic_skip_next_filled,
                     containerColor = LocalContentColor.current.copy(alpha = 0.11f),
                     iconTint = LocalContentColor.current,
                     buttonSize = 52.dp,

@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.json.JSONArray
+import com.penguin.systemui.R as PenguinR
 import org.json.JSONObject
 
 open class SystemIslandManager
@@ -103,9 +104,9 @@ constructor(
                 if (lastRingerMode != -1 && lastRingerMode != mode) {
                     val label =
                         when (mode) {
-                            AudioManager.RINGER_MODE_SILENT -> context.getString(R.string.ax_dynamic_bar_silent)
-                            AudioManager.RINGER_MODE_VIBRATE -> context.getString(R.string.ax_dynamic_bar_vibrate)
-                            AudioManager.RINGER_MODE_NORMAL -> context.getString(R.string.ax_dynamic_bar_ring)
+                            AudioManager.RINGER_MODE_SILENT -> context.getString(PenguinR.string.ax_dynamic_bar_silent)
+                            AudioManager.RINGER_MODE_VIBRATE -> context.getString(PenguinR.string.ax_dynamic_bar_vibrate)
+                            AudioManager.RINGER_MODE_NORMAL -> context.getString(PenguinR.string.ax_dynamic_bar_ring)
                             else -> return
                         }
                     val event = IslandEvent.RingerMode(mode = mode, label = label)
@@ -391,9 +392,9 @@ constructor(
     fun emitRingerEvent(mode: Int) {
         val label =
             when (mode) {
-                AudioManager.RINGER_MODE_SILENT -> context.getString(R.string.ax_dynamic_bar_silent)
-                AudioManager.RINGER_MODE_VIBRATE -> context.getString(R.string.ax_dynamic_bar_vibrate)
-                else -> context.getString(R.string.ax_dynamic_bar_ring)
+                AudioManager.RINGER_MODE_SILENT -> context.getString(PenguinR.string.ax_dynamic_bar_silent)
+                AudioManager.RINGER_MODE_VIBRATE -> context.getString(PenguinR.string.ax_dynamic_bar_vibrate)
+                else -> context.getString(PenguinR.string.ax_dynamic_bar_ring)
             }
         val event = IslandEvent.RingerMode(mode = mode, label = label)
         _ringerEvent.value = event

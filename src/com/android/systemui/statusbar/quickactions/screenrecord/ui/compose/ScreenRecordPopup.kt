@@ -52,6 +52,7 @@ import com.android.systemui.statusbar.quickactions.popups.ui.compose.IslandGlyph
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.pressScale
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.rememberElapsedDurationText
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.PopupSurface
+import com.penguin.systemui.R as PenguinR
 import com.android.systemui.statusbar.quickactions.screenrecord.shared.model.ScreenRecordPopupModel
 
 private val PopupShape = RoundedCornerShape(32.dp)
@@ -113,11 +114,11 @@ fun ScreenRecordPopup(
                             when (model) {
                                 is ScreenRecordPopupModel.Starting ->
                                     stringResource(
-                                        R.string.dynamic_island_screen_record_countdown,
+                                        PenguinR.string.dynamic_island_screen_record_countdown,
                                         model.secondsUntilStarted,
                                     )
                                 is ScreenRecordPopupModel.Recording ->
-                                    stringResource(R.string.dynamic_island_screen_record_active)
+                                    stringResource(PenguinR.string.dynamic_island_screen_record_active)
                             },
                         style = MaterialTheme.typography.bodyMedium,
                         color = LocalContentColor.current.copy(alpha = 0.73f),

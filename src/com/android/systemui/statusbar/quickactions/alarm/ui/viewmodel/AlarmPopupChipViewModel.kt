@@ -54,6 +54,7 @@ import java.util.Locale
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.callbackFlow
+import com.penguin.systemui.R as PenguinR
 import kotlinx.coroutines.flow.map
 
 /** ViewModel backing the next-alarm page inside the dynamic island. */
@@ -134,7 +135,7 @@ constructor(
         val chipTimeText =
             alarm?.let { formatAlarmTime(it.triggerTime, skeleton = chipSkeleton()) }
                 ?: activeNotification?.notificationText().orEmpty().ifBlank {
-                    context.getString(R.string.dynamic_island_alarm_active_title)
+                    context.getString(PenguinR.string.dynamic_island_alarm_active_title)
                 }
         val fullTimeText =
             alarm?.let { formatAlarmTime(it.triggerTime, skeleton = chipSkeleton()) }
@@ -142,7 +143,7 @@ constructor(
         val dayText =
             alarm?.let { formatAlarmTime(it.triggerTime, skeleton = daySkeleton()) }
                 ?: activeNotification?.notificationTitle().orEmpty().ifBlank {
-                    context.getString(R.string.dynamic_island_alarm_active_title)
+                    context.getString(PenguinR.string.dynamic_island_alarm_active_title)
                 }
         val onOpen =
             activeNotification?.sbn?.notification?.contentIntent.toActivityLaunchAction(
@@ -162,9 +163,9 @@ constructor(
             AlarmPopupModel(
                 title =
                     if (activeNotification?.hasSnoozeAction() == true) {
-                        context.getString(R.string.dynamic_island_alarm_active_title)
+                        context.getString(PenguinR.string.dynamic_island_alarm_active_title)
                     } else {
-                        context.getString(R.string.dynamic_island_alarm_title)
+                        context.getString(PenguinR.string.dynamic_island_alarm_title)
                     },
                 triggerTimeMs = alarm?.triggerTime ?: 0L,
                 chipTimeText = chipTimeText,
@@ -176,7 +177,7 @@ constructor(
                         activeNotification?.snoozeAction()?.toSendAction()?.let {
                             add(
                                 PopupActionModel(
-                                    context.getString(R.string.dynamic_island_action_snooze),
+                                    context.getString(PenguinR.string.dynamic_island_action_snooze),
                                     it,
                                     emphasized = true,
                                 )
@@ -199,7 +200,7 @@ constructor(
                     ChipIcon(
                         icon =
                             Icon.Resource(
-                                resId = R.drawable.ic_dynamic_island_alarm,
+                                resId = PenguinR.drawable.ic_dynamic_island_alarm,
                                 contentDescription = ContentDescription.Resource(R.string.status_bar_alarm),
                             ),
                         onClick = model.onOpen,

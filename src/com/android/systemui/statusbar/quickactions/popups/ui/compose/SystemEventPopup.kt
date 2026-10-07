@@ -73,6 +73,7 @@ import com.android.systemui.statusbar.quickactions.popups.ui.model.BluetoothBatt
 import com.android.systemui.statusbar.quickactions.popups.ui.model.ChargingDetailModel
 import com.android.systemui.statusbar.quickactions.popups.ui.model.PopupContentModel
 import com.android.systemui.statusbar.quickactions.popups.ui.model.SystemEventKind
+import com.penguin.systemui.R as PenguinR
 import kotlinx.coroutines.delay
 
 private val EventPopupShape = RoundedCornerShape(32.dp)
@@ -205,7 +206,7 @@ private fun BluetoothEarbudBatteries(batteries: List<BluetoothBatteryModel>, acc
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.dynamic_island_earbud),
+                            painter = painterResource(PenguinR.drawable.dynamic_island_earbud),
                             contentDescription = null,
                             tint = LocalContentColor.current.copy(alpha = 0.85f),
                             modifier = Modifier.size(24.dp)
@@ -334,7 +335,7 @@ private fun EventHeader(model: PopupContentModel.SystemEvent, accent: Color, sho
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.dynamic_island_earbuds_case),
+                        painter = painterResource(PenguinR.drawable.dynamic_island_earbuds_case),
                         contentDescription = null,
                         tint = LocalContentColor.current.copy(alpha = 0.7f),
                         modifier = Modifier.size(16.dp),

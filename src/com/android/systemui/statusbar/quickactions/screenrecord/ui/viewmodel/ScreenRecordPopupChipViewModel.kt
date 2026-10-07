@@ -43,6 +43,7 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import com.penguin.systemui.R as PenguinR
 import kotlinx.coroutines.flow.map
 
 /** ViewModel backing the screen-recording page inside the dynamic island. */
@@ -125,7 +126,7 @@ constructor(
                 when (model) {
                     is ScreenRecordPopupModel.Starting -> model.secondsUntilStarted.toString()
                     is ScreenRecordPopupModel.Recording ->
-                        context.getString(R.string.dynamic_island_screen_record_short)
+                        context.getString(PenguinR.string.dynamic_island_screen_record_short)
                 },
             colors = ColorsModel.DynamicIslandAlert,
             contentDescription = recordingDescription,
