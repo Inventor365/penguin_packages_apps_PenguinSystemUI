@@ -1,0 +1,8 @@
+-keep class com.penguin.systemui.PenguinSystemUIInitializer { *; }
+
+-keep,allowoptimization,allowaccessmodification class com.penguin.systemui.dagger.DaggerPenguinGlobalRootComponent** { !synthetic *; }
+
+# Carried over from SystemUI's own rules
+-keep class com.android.systemui.smartspace.** { *; }
+-keep class android.hardware.** { *; }
+-keep class com.google.** { *; }
