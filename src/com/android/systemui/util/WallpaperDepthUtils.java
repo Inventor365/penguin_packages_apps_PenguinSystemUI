@@ -39,13 +39,14 @@ import android.widget.FrameLayout;
 
 import com.android.systemui.Dependency;
 import com.android.systemui.media.MediaViewController;
+import com.android.systemui.penguin.DepthSubject;
 import com.android.systemui.statusbar.phone.ScrimController;
 import com.android.systemui.statusbar.phone.ScrimState;
 import com.android.systemui.tuner.TunerService;
 
 import dagger.Lazy;
 
-public class WallpaperDepthUtils {
+public class WallpaperDepthUtils implements DepthSubject {
 
     private static final String TAG = "DepthWallpaper";
 
@@ -118,6 +119,7 @@ public class WallpaperDepthUtils {
     public static WallpaperDepthUtils getInstance(Context context, Lazy<ScrimController> scrimControllerLazy) {
         if (instance == null) {
             instance = new WallpaperDepthUtils(context, scrimControllerLazy);
+            DepthSubject.Companion.setInstance(instance);
         }
         return instance;
     }
@@ -127,10 +129,11 @@ public class WallpaperDepthUtils {
 
     private static boolean sExpandedMediaArtVisible;
 
-    public static void setExpandedMediaArtVisible(boolean visible) {
+    @Override
+    public void setExpandedMediaArtVisible(boolean visible) {
         if (sExpandedMediaArtVisible == visible) return;
         sExpandedMediaArtVisible = visible;
-        if (instance != null) instance.updateDepthWallpaperVisibility();
+        updateDepthWallpaperVisibility();
     }
 
     public void setLockscreenScene(boolean onLockscreen) {
@@ -285,6 +288,11 @@ public class WallpaperDepthUtils {
     
     public void updateDepthWallpaper() {
         updateDepthWallpaper(false);
+    }
+
+    @Override
+    public View getView() {
+        return mLockScreenSubject;
     }
 
     public FrameLayout getDepthWallpaperView() {
