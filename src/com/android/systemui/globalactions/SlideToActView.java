@@ -39,7 +39,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.android.systemui.res.R;
+import com.penguin.systemui.R;
 
 public class SlideToActView extends FrameLayout {
 

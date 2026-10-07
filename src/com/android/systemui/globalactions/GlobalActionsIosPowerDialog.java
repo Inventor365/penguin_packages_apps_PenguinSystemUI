@@ -39,22 +39,22 @@ public class GlobalActionsIosPowerDialog {
         final Resources res = context.getResources();
         final LayoutInflater inflater = LayoutInflater.from(context);
         final ViewGroup content = (ViewGroup) inflater.inflate(
-                com.android.systemui.res.R.layout.global_actions_ios_submenu, null);
+                com.penguin.systemui.R.layout.global_actions_ios_submenu, null);
 
         final Dialog dialog = new Dialog(context);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(content);
 
         final LinearLayout rows = content.findViewById(
-                com.android.systemui.res.R.id.power_menu_ios_submenu_content);
+                com.penguin.systemui.R.id.power_menu_ios_submenu_content);
         final int track = res.getColor(
-                com.android.systemui.res.R.color.power_menu_ios_track, null);
+                com.penguin.systemui.R.color.power_menu_ios_track, null);
         final int thumb = res.getColor(
-                com.android.systemui.res.R.color.power_menu_ios_thumb, null);
+                com.penguin.systemui.R.color.power_menu_ios_thumb, null);
         final int foreground = res.getColor(
-                com.android.systemui.res.R.color.power_menu_ios_foreground, null);
+                com.penguin.systemui.R.color.power_menu_ios_foreground, null);
         final int rowGap = res.getDimensionPixelSize(
-                com.android.systemui.res.R.dimen.power_menu_ios_row_gap);
+                com.penguin.systemui.R.dimen.power_menu_ios_row_gap);
 
         for (int i = 0; i < adapter.getCount(); i++) {
             Object item = adapter.getItem(i);
@@ -80,7 +80,7 @@ public class GlobalActionsIosPowerDialog {
             rows.addView(row, params);
         }
 
-        content.findViewById(com.android.systemui.res.R.id.power_menu_ios_close)
+        content.findViewById(com.penguin.systemui.R.id.power_menu_ios_close)
                 .setOnClickListener(v -> dialog.dismiss());
 
         final Window window = dialog.getWindow();
@@ -101,7 +101,7 @@ public class GlobalActionsIosPowerDialog {
             window.setBackgroundDrawableResource(android.R.color.transparent);
         } else {
             window.setBackgroundDrawableResource(
-                    com.android.systemui.res.R.drawable.power_menu_ios_backdrop);
+                    com.penguin.systemui.R.drawable.power_menu_ios_backdrop);
         }
 
         return dialog;

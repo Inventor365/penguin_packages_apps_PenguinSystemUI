@@ -5,6 +5,12 @@
 
 package com.penguin.systemui.dagger
 
+import com.android.systemui.globalactions.IosPowerMenuLayout
+import com.android.systemui.penguin.PowerMenuLayout
+import dagger.Binds
 import dagger.Module
 
-@Module interface PenguinSystemUIModule
+@Module
+interface PenguinSystemUIModule {
+    @Binds fun powerMenuLayout(impl: IosPowerMenuLayout): PowerMenuLayout
+}
