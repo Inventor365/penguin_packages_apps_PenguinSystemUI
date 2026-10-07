@@ -24,7 +24,7 @@ android_library {
         "keepanno-annotations",
         "extphonelib",
     ],
-    manifest: "AndroidManifest.xml",
+    manifest: "AndroidManifest-core.xml",
     use_resource_processor: true,
     enable_ksp: true,
     plugins: ["dagger2-compiler"],
