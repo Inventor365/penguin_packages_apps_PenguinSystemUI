@@ -12,6 +12,8 @@ import com.android.systemui.keyguard.ui.composable.media.ExpandableLockscreenPla
 import com.android.systemui.penguin.DepthSubject
 import com.android.systemui.penguin.LockscreenPlayer
 import com.android.systemui.penguin.PowerMenuLayout
+import com.android.systemui.penguin.QsPanels
+import com.android.systemui.penguin.ShadeMotion
 import com.android.systemui.penguin.StatusBarIsland
 import com.android.systemui.penguin.VolumePanelLooks
 import com.android.systemui.statusbar.phone.ScrimController
@@ -23,6 +25,8 @@ import dagger.Binds
 import dagger.Lazy
 import dagger.Module
 import dagger.Provides
+import com.penguin.systemui.qs.PenguinQsPanels
+import com.penguin.systemui.qs.PenguinShadeMotion
 
 @Module(includes = [MediaControlChipModule::class])
 interface PenguinSystemUIModule {
@@ -33,6 +37,10 @@ interface PenguinSystemUIModule {
     @Binds fun statusBarIsland(impl: DynamicIsland): StatusBarIsland
 
     @Binds fun lockscreenPlayer(impl: ExpandableLockscreenPlayer): LockscreenPlayer
+
+    @Binds @SysUISingleton fun qsPanels(impl: PenguinQsPanels): QsPanels
+
+    @Binds @SysUISingleton fun shadeMotion(impl: PenguinShadeMotion): ShadeMotion
 
     companion object {
         @Provides

@@ -1,0 +1,88 @@
+/*
+ * Copyright (C) 2026 The PenguinOS Project
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package com.penguin.systemui.qs
+
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
+import com.android.compose.animation.scene.ContentScope
+import com.android.systemui.penguin.LocalQsPanels
+import com.android.systemui.penguin.QsEditMode
+import com.android.systemui.penguin.QsPanels
+import com.android.systemui.penguin.QsTileStyle
+import com.android.systemui.qs.panels.ui.compose.StyledQsEditMode
+import com.android.systemui.qs.panels.ui.compose.infinitegrid.styledQsTileStyle
+import com.android.systemui.qs.shared.style.PenguinQsStyle
+import com.android.systemui.qs.shared.style.QsPanelStyleRepository
+import com.android.systemui.qs.ui.composable.LocalQsHostTransition
+import com.android.systemui.qs.ui.composable.StyledOverlayBody
+import com.android.systemui.qs.ui.composable.StyledOverlayEditor
+import com.android.systemui.qs.ui.composable.StyledOverlayHost
+import com.android.systemui.qs.ui.composable.StyledQuickSettingsContent
+import com.android.systemui.qs.ui.composable.qsHostTransition
+import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
+import com.android.systemui.shade.ui.composable.StyledShadeHeader
+import com.android.systemui.shade.ui.viewmodel.ShadeSceneContentViewModel
+import javax.inject.Inject
+
+class PenguinQsPanels @Inject constructor(styleRepository: QsPanelStyleRepository) : QsPanels {
+
+    init {
+        PenguinQsStyle.repository = styleRepository
+    }
+
+    @Composable
+    override fun ContentScope.Content(
+        viewModel: QuickSettingsContainerViewModel,
+        mediaInRow: Boolean,
+        modifier: Modifier,
+        mediaSquishiness: () -> Float,
+    ) {
+        StyledQuickSettingsContent(viewModel, mediaInRow, modifier, mediaSquishiness)
+    }
+
+    @Composable
+    override fun ContentScope.ShadeHeader(
+        viewModel: ShadeSceneContentViewModel,
+        mediaInRow: Boolean,
+        horizontalPadding: Dp,
+        visualOffset: Density.() -> Int,
+    ) {
+        StyledShadeHeader(viewModel, mediaInRow, horizontalPadding, visualOffset)
+    }
+
+    @Composable
+    override fun ContentScope.OverlayBody(
+        viewModel: QuickSettingsContainerViewModel,
+        buildNumber: @Composable ColumnScope.() -> Unit,
+    ) {
+        StyledOverlayBody(viewModel, buildNumber)
+    }
+
+    @Composable
+    override fun ContentScope.OverlayEditor(
+        viewModel: QuickSettingsContainerViewModel,
+        modifier: Modifier,
+    ): Boolean = StyledOverlayEditor(viewModel, modifier)
+
+    @Composable
+    override fun ContentScope.OverlayHost(content: @Composable () -> Unit) {
+        val container = LocalQsPanels.current?.container
+        if (container == null) content() else StyledOverlayHost(container, content)
+    }
+
+    @Composable
+    override fun ContentScope.Host(content: @Composable () -> Unit) {
+        CompositionLocalProvider(LocalQsHostTransition provides qsHostTransition()) { content() }
+    }
+
+    override val editMode: QsEditMode = StyledQsEditMode()
+
+    @Composable override fun tileStyle(): QsTileStyle? = styledQsTileStyle()
+}
