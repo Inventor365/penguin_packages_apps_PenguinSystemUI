@@ -10,8 +10,11 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.globalactions.IosPowerMenuLayout
 import com.android.systemui.penguin.DepthSubject
 import com.android.systemui.penguin.PowerMenuLayout
+import com.android.systemui.penguin.StatusBarIsland
 import com.android.systemui.penguin.VolumePanelLooks
 import com.android.systemui.statusbar.phone.ScrimController
+import com.android.systemui.statusbar.quickactions.dynamicisland.media.MediaControlChipModule
+import com.android.systemui.statusbar.quickactions.popups.ui.binder.DynamicIsland
 import com.android.systemui.util.WallpaperDepthUtils
 import com.android.systemui.volume.StyledVolumePanelLooks
 import dagger.Binds
@@ -19,11 +22,13 @@ import dagger.Lazy
 import dagger.Module
 import dagger.Provides
 
-@Module
+@Module(includes = [MediaControlChipModule::class])
 interface PenguinSystemUIModule {
     @Binds fun powerMenuLayout(impl: IosPowerMenuLayout): PowerMenuLayout
 
     @Binds fun volumePanelLooks(impl: StyledVolumePanelLooks): VolumePanelLooks
+
+    @Binds fun statusBarIsland(impl: DynamicIsland): StatusBarIsland
 
     companion object {
         @Provides
