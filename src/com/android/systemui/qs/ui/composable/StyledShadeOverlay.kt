@@ -21,6 +21,8 @@ import com.android.systemui.qs.shared.style.panelStyle
 import androidx.compose.foundation.layout.Arrangement
 import com.android.systemui.qs.composefragment.BrightnessLayout
 import com.android.systemui.qs.shared.style.LocalGlassBlurAllowed
+import kotlinx.coroutines.flow.StateFlow
+import com.android.systemui.qs.shared.style.LocalGlassBlurAlpha
 import com.android.systemui.qs.composefragment.VolumeLayout
 import com.android.systemui.qs.shared.ui.QuickSettings
 import androidx.compose.animation.AnimatedContent
@@ -261,14 +263,42 @@ fun ContentScope.StyledOverlayEditor(
 @Composable
 fun ContentScope.StyledOverlayHost(
     containerViewModel: QuickSettingsContainerViewModel,
+    launchingActivity: StateFlow<Boolean>,
     content: @Composable () -> Unit,
 ) {
+    val launching by launchingActivity.collectAsStateWithLifecycle()
+    val launchFade by
+        animateFloatAsState(
+            if (launching) 0f else 1f,
+            animationSpec = tween(durationMillis = 120),
+            label = "Launch fade",
+        )
     val isEditing by containerViewModel.editModeViewModel.isEditing.collectAsStateWithLifecycle()
     LaunchedEffect(isEditing) { if (!isEditing) OneUiToggleEditing.active = false }
     val mirrorShowing by
         rememberUpdatedState(containerViewModel.brightnessSliderViewModel.showMirror)
-    val settled = remember(layoutState) { { layoutState.isIdle(contentKey) && !mirrorShowing } }
-    CompositionLocalProvider(LocalGlassBlurAllowed provides settled) { content() }
+    val allowed = remember { { !mirrorShowing } }
+    val fade =
+        remember(layoutState) {
+            {
+                val transition = layoutState.currentTransition
+                launchFade *
+                    when {
+                        transition == null -> 1f
+                        transition.toContent == contentKey -> transition.progress
+                        transition.fromContent == contentKey -> 1f - transition.progress
+                        else -> 1f
+                    }
+            }
+        }
+    CompositionLocalProvider(
+        LocalGlassBlurAllowed provides allowed,
+        LocalGlassBlurAlpha provides fade,
+    ) {
+        Box(Modifier.graphicsLayer { alpha = launchFade }, propagateMinConstraints = true) {
+            content()
+        }
+    }
 }
 
 @Composable

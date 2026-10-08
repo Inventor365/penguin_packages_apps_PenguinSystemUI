@@ -27,11 +27,17 @@ import com.android.systemui.qs.ui.composable.StyledOverlayHost
 import com.android.systemui.qs.ui.composable.StyledQuickSettingsContent
 import com.android.systemui.qs.ui.composable.qsHostTransition
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
+import com.android.systemui.shade.domain.interactor.ShadeAnimationInteractor
 import com.android.systemui.shade.ui.composable.StyledShadeHeader
 import com.android.systemui.shade.ui.viewmodel.ShadeSceneContentViewModel
 import javax.inject.Inject
 
-class PenguinQsPanels @Inject constructor(styleRepository: QsPanelStyleRepository) : QsPanels {
+class PenguinQsPanels
+@Inject
+constructor(
+    styleRepository: QsPanelStyleRepository,
+    private val shadeAnimationInteractor: ShadeAnimationInteractor,
+) : QsPanels {
 
     init {
         PenguinQsStyle.repository = styleRepository
@@ -74,7 +80,11 @@ class PenguinQsPanels @Inject constructor(styleRepository: QsPanelStyleRepositor
     @Composable
     override fun ContentScope.OverlayHost(content: @Composable () -> Unit) {
         val container = LocalQsPanels.current?.container
-        if (container == null) content() else StyledOverlayHost(container, content)
+        if (container == null) {
+            content()
+        } else {
+            StyledOverlayHost(container, shadeAnimationInteractor.isLaunchingActivity, content)
+        }
     }
 
     @Composable
