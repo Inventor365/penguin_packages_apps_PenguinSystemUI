@@ -72,7 +72,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -87,6 +86,7 @@ import com.android.systemui.qs.shared.style.LocalGlassBlurAlpha
 import com.android.systemui.qs.shared.style.liquidGlassEnabled
 import com.android.systemui.qs.composefragment.ConnectivityFolder
 import com.android.systemui.qs.composefragment.ConnectivityFolderExpansion
+import com.android.systemui.qs.composefragment.ControlCentreNotPlaying
 import com.android.systemui.qs.composefragment.OneUiExtraDimButton
 import com.android.systemui.qs.composefragment.OneUiSoundModeButton
 import com.android.systemui.qs.composefragment.OneUiTileControl
@@ -118,6 +118,7 @@ private object PenguinGridOrigin {
 
 internal val PageIconSize = 18.dp
 private val PageIconSpacing = 36.dp
+private val PageIconEdgeOffset = 6.dp
 
 internal val PenguinGridMargin = 24.dp
 
@@ -276,9 +277,9 @@ private fun ContentScope.PenguinGridPages(
             modifier
                 .element(Elements.QuickSettingsContent)
                 .fillMaxWidth()
-                .then(if (settled) Modifier.animateContentSize() else Modifier)
                 .sysuiResTag("quick_settings_panel")
     ) {
+        Box(Modifier.fillMaxWidth().then(if (settled) Modifier.animateContentSize() else Modifier)) {
         val panelBlurAlpha = LocalGlassBlurAlpha.current
         val gridBlurAlpha =
             remember(panelBlurAlpha) { { panelBlurAlpha() * (1f - progress.value) } }
@@ -328,17 +329,6 @@ private fun ContentScope.PenguinGridPages(
         }
         }
 
-        if (pages.size > 1) {
-            PageIcons(
-                pages = pages,
-                current = pagerState.currentPage,
-                modifier =
-                    Modifier.align(Alignment.TopEnd)
-                        .offset(x = -(horizontalMargin - PageIconSize) / 2)
-                        .padding(top = pageHeight / 2)
-                        .graphicsLayer { alpha = 1f - progress.value },
-            )
-        }
 
         if (sheetShowing) {
             Box(
@@ -355,6 +345,19 @@ private fun ContentScope.PenguinGridPages(
                 mediaShown = mediaShown,
                 progress = { progress.value },
                 horizontalMargin = horizontalMargin,
+            )
+        }
+        }
+
+        if (pages.size > 1) {
+            PageIcons(
+                pages = pages,
+                current = pagerState.currentPage,
+                modifier =
+                    Modifier.align(Alignment.TopEnd)
+                        .offset(x = PageIconEdgeOffset)
+                        .padding(top = pageHeight / 2)
+                        .graphicsLayer { alpha = 1f - progress.value },
             )
         }
     }
@@ -614,11 +617,7 @@ object OneUiToggleEditing {
 
 @Composable
 private fun NotPlaying(height: Dp) {
-    PanelElementPlaceholder(
-        height = height,
-        iconRes = R.drawable.ic_music_note,
-        label = stringResource(R.string.penguin_media_not_playing),
-    )
+    ControlCentreNotPlaying(height)
 }
 
 @Composable

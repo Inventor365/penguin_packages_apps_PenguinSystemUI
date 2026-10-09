@@ -70,6 +70,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import com.android.compose.ui.graphics.painter.rememberDrawablePainter
@@ -1260,5 +1261,85 @@ private fun MyUiSeekBar(navigation: MediaNavigationViewModel, modifier: Modifier
             cap = StrokeCap.Round,
         )
         drawCircle(Color.White, radius = 3.dp.toPx(), center = Offset(thumbX, y))
+    }
+}
+
+@Composable
+internal fun ControlCentreNotPlaying(height: Dp) {
+    val glass = liquidGlassOn
+    Column(
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(height)
+                .clip(RoundedCornerShape(ArtworkCorner))
+                .background(glassSurface())
+                .glassRim(RoundedCornerShape(ArtworkCorner))
+                .padding(14.dp),
+        verticalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
+        ) {
+            Box(
+                Modifier.size(ArtSize)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+            )
+            Box(
+                Modifier.size(ControlSize + 4.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                M3Icon(
+                    painter = painterResource(R.drawable.ic_cast),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+        Text(
+            text = stringResource(R.string.penguin_media_not_playing),
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val dim = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+            NotPlayingGlyph(
+                if (glass) R.drawable.lg_glyph_backward_fill else R.drawable.ic_penguin_media_previous,
+                ControlSize,
+                dim,
+            )
+            NotPlayingGlyph(
+                if (glass) R.drawable.lg_glyph_play_fill else R.drawable.ic_penguin_media_play,
+                ControlSize + 6.dp,
+                MaterialTheme.colorScheme.onSurface,
+            )
+            NotPlayingGlyph(
+                if (glass) R.drawable.lg_glyph_forward_fill else R.drawable.ic_penguin_media_next,
+                ControlSize,
+                dim,
+            )
+        }
+    }
+}
+
+@Composable
+private fun NotPlayingGlyph(iconRes: Int, size: Dp, tint: Color) {
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+        M3Icon(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(size * 0.6f),
+        )
     }
 }

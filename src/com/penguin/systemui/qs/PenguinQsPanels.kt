@@ -23,6 +23,8 @@ import com.android.systemui.qs.panels.ui.compose.infinitegrid.styledQsTileStyle
 import com.android.systemui.qs.shared.style.LocalGlassBlurAllowed
 import com.android.systemui.qs.shared.style.PenguinQsStyle
 import com.android.systemui.qs.shared.style.QsPanelStyleRepository
+import com.android.systemui.qs.panels.ui.viewmodel.toolbar.ToolbarViewModel
+import com.android.systemui.qs.ui.composable.ControlCentreTop
 import com.android.systemui.qs.ui.composable.LocalQsHostTransition
 import com.android.systemui.qs.ui.composable.PenguinMediaExpansion
 import com.android.systemui.qs.ui.composable.StyledOverlayBody
@@ -30,6 +32,7 @@ import com.android.systemui.qs.ui.composable.StyledOverlayEditor
 import com.android.systemui.qs.ui.composable.StyledOverlayHost
 import com.android.systemui.qs.ui.composable.StyledQuickSettingsContent
 import com.android.systemui.qs.ui.composable.closeExpansions
+import com.android.systemui.qs.ui.composable.controlCentreTopShown
 import com.android.systemui.qs.ui.composable.qsHostTransition
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
 import com.android.systemui.shade.domain.interactor.ShadeAnimationInteractor
@@ -97,6 +100,20 @@ constructor(
             StyledOverlayHost(container, shadeAnimationInteractor.isLaunchingActivity, content)
         }
     }
+
+    @Composable
+    override fun ContentScope.OverlayTop(
+        viewModel: QuickSettingsContainerViewModel,
+        toolbarViewModel: ToolbarViewModel,
+    ): Boolean {
+        if (!controlCentreTopShown(viewModel)) return false
+        ControlCentreTop(viewModel, toolbarViewModel)
+        return true
+    }
+
+    @Composable
+    override fun showsOverlayStatusBar(viewModel: QuickSettingsContainerViewModel): Boolean =
+        !controlCentreTopShown(viewModel)
 
     @Composable
     override fun ContentScope.Host(content: @Composable () -> Unit) {
