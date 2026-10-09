@@ -8,6 +8,7 @@ package com.penguin.systemui.qs
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -19,6 +20,7 @@ import com.android.systemui.penguin.QsTileStyle
 import com.android.systemui.qs.composefragment.ConnectivityFolderExpansion
 import com.android.systemui.qs.panels.ui.compose.StyledQsEditMode
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.styledQsTileStyle
+import com.android.systemui.qs.shared.style.LocalGlassBlurAllowed
 import com.android.systemui.qs.shared.style.PenguinQsStyle
 import com.android.systemui.qs.shared.style.QsPanelStyleRepository
 import com.android.systemui.qs.ui.composable.LocalQsHostTransition
@@ -53,7 +55,10 @@ constructor(
         modifier: Modifier,
         mediaSquishiness: () -> Float,
     ) {
-        StyledQuickSettingsContent(viewModel, mediaInRow, modifier, mediaSquishiness)
+        val mirror = viewModel.brightnessSliderViewModel
+        HideGlassWhileMirroring({ mirror.showMirror }) {
+            StyledQuickSettingsContent(viewModel, mediaInRow, modifier, mediaSquishiness)
+        }
     }
 
     @Composable
@@ -63,7 +68,10 @@ constructor(
         horizontalPadding: Dp,
         visualOffset: Density.() -> Int,
     ) {
-        StyledShadeHeader(viewModel, mediaInRow, horizontalPadding, visualOffset)
+        val mirror = viewModel.qsContainerViewModel.brightnessSliderViewModel
+        HideGlassWhileMirroring({ mirror.showMirror }) {
+            StyledShadeHeader(viewModel, mediaInRow, horizontalPadding, visualOffset)
+        }
     }
 
     @Composable
@@ -103,5 +111,12 @@ constructor(
         val open = ConnectivityFolderExpansion.expanded || PenguinMediaExpansion.expanded
         if (open) closeExpansions()
         return open
+    }
+
+    @Composable
+    private fun HideGlassWhileMirroring(mirroring: () -> Boolean, content: @Composable () -> Unit) {
+        val outer = LocalGlassBlurAllowed.current
+        val allowed = remember(outer) { { outer() && !mirroring() } }
+        CompositionLocalProvider(LocalGlassBlurAllowed provides allowed) { content() }
     }
 }
