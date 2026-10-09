@@ -16,15 +16,18 @@ import com.android.systemui.penguin.LocalQsPanels
 import com.android.systemui.penguin.QsEditMode
 import com.android.systemui.penguin.QsPanels
 import com.android.systemui.penguin.QsTileStyle
+import com.android.systemui.qs.composefragment.ConnectivityFolderExpansion
 import com.android.systemui.qs.panels.ui.compose.StyledQsEditMode
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.styledQsTileStyle
 import com.android.systemui.qs.shared.style.PenguinQsStyle
 import com.android.systemui.qs.shared.style.QsPanelStyleRepository
 import com.android.systemui.qs.ui.composable.LocalQsHostTransition
+import com.android.systemui.qs.ui.composable.PenguinMediaExpansion
 import com.android.systemui.qs.ui.composable.StyledOverlayBody
 import com.android.systemui.qs.ui.composable.StyledOverlayEditor
 import com.android.systemui.qs.ui.composable.StyledOverlayHost
 import com.android.systemui.qs.ui.composable.StyledQuickSettingsContent
+import com.android.systemui.qs.ui.composable.closeExpansions
 import com.android.systemui.qs.ui.composable.qsHostTransition
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
 import com.android.systemui.shade.domain.interactor.ShadeAnimationInteractor
@@ -95,4 +98,10 @@ constructor(
     override val editMode: QsEditMode = StyledQsEditMode()
 
     @Composable override fun tileStyle(): QsTileStyle? = styledQsTileStyle()
+
+    override fun onScrimClicked(): Boolean {
+        val open = ConnectivityFolderExpansion.expanded || PenguinMediaExpansion.expanded
+        if (open) closeExpansions()
+        return open
+    }
 }
