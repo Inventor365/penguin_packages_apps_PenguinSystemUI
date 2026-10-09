@@ -396,7 +396,7 @@ private fun ExpandedSheet(
 ) {
     val all = large + small
     val cards =
-        if (uniformGrid) all
+        if (uniformGrid || fitHeight) all
         else if (liquidGlassOn) {
             val order = listOf("wifi", "cast", "cell", "bt")
             all.filter { it.spec.spec in order }.sortedBy { order.indexOf(it.spec.spec) }
