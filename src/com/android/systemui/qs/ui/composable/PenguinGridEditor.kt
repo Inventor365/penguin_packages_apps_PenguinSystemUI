@@ -613,14 +613,16 @@ private fun ContentScope.PenguinGridEditorContent(
                         }
                     }
 
-                    PageIcons(
-                        pages = List(pageCount) { pages.getOrNull(it).orEmpty() },
-                        current = pagerState.currentPage,
-                        modifier =
-                            Modifier.align(Alignment.TopEnd)
-                                .offset(x = -(horizontalMargin - PageIconSize) / 2)
-                                .padding(top = pageHeight / 2),
-                    )
+                    if (!combined || pageCount > 1) {
+                        PageIcons(
+                            pages = List(pageCount) { pages.getOrNull(it).orEmpty() },
+                            current = pagerState.currentPage,
+                            modifier =
+                                Modifier.align(Alignment.TopEnd)
+                                    .offset(x = -(horizontalMargin - PageIconSize) / 2)
+                                    .padding(top = pageHeight / 2),
+                        )
+                    }
 
                     activeDrag?.let { held ->
                         val topLeft = held.pointer - held.grab
