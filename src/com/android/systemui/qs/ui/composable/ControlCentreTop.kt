@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -47,6 +49,10 @@ fun controlCentreTopShown(viewModel: QuickSettingsContainerViewModel): Boolean =
     viewModel.panelStyle == QsPanelStyle.Penguin && liquidGlassEnabled()
 
 @Composable
+fun controlCentreWide(viewModel: QuickSettingsContainerViewModel): Boolean =
+    controlCentreTopShown(viewModel) && wideControlCentre()
+
+@Composable
 fun ContentScope.ControlCentreTop(
     viewModel: QuickSettingsContainerViewModel,
     toolbarViewModel: ToolbarViewModel,
@@ -55,6 +61,17 @@ fun ContentScope.ControlCentreTop(
         rememberViewModel("ControlCentreTop") {
             toolbarViewModel.editModeButtonViewModelFactory.create()
         }
+    if (wideControlCentre()) {
+        ShadeStatusRow(
+            viewModel.shadeHeaderViewModel,
+            Modifier.fillMaxWidth()
+                .wrapContentWidth()
+                .width(wideGridWidth())
+                .padding(horizontal = PenguinGridMargin + 4.dp)
+                .padding(top = 4.dp, bottom = 12.dp),
+        )
+        return
+    }
     Column(
         Modifier.fillMaxWidth()
             .padding(horizontal = PenguinGridMargin)

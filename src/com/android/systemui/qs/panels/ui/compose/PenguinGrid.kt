@@ -101,6 +101,19 @@ object PenguinGrid {
 
     fun rows(page: List<Item>) = page.maxOfOrNull { it.bottom } ?: 0
 
+    const val WIDE_ROWS = 4
+
+    fun foldWide(page: List<Item>): List<Item> {
+        val split =
+            (WIDE_ROWS downTo 1).firstOrNull { row -> page.none { it.y < row && it.bottom > row } }
+                ?: return page.map {
+                    if (it.y < WIDE_ROWS && it.bottom > WIDE_ROWS) it.copy(h = WIDE_ROWS - it.y)
+                    else it
+                }
+        if (rows(page) <= split) return page
+        return page.map { if (it.y < split) it else it.copy(x = it.x + COLUMNS, y = it.y - split) }
+    }
+
     private fun stack(pages: List<List<Item>>): List<List<Item>> {
         if (pages.size < 2) return pages
         var top = 0

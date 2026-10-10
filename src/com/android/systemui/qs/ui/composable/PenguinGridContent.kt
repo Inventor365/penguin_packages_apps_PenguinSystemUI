@@ -30,6 +30,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -126,11 +128,29 @@ internal val PenguinGridGap = 16.dp
 
 @Composable
 internal fun penguinModuleHeight(rows: Int): Dp {
-    val row = dimensionResource(id = R.dimen.common_tile_default_tile_height)
+    val row = penguinCell()
     return row * rows + PenguinGridGap * (rows - 1).coerceAtLeast(0)
 }
 
 internal val LocalPenguinGridFlavor = compositionLocalOf { PenguinGrid.Flavor.ControlCentre }
+
+private val LocalPenguinCell = compositionLocalOf<Dp?> { null }
+
+private val WideReservedHeight = 96.dp
+
+@Composable
+private fun penguinCell(): Dp =
+    LocalPenguinCell.current ?: dimensionResource(id = R.dimen.common_tile_default_tile_height)
+
+@Composable
+private fun wideCell(): Dp {
+    val tile = dimensionResource(id = R.dimen.common_tile_default_tile_height)
+    val rows = PenguinGrid.WIDE_ROWS
+    val fit =
+        (LocalConfiguration.current.screenHeightDp.dp - WideReservedHeight -
+            PenguinGridGap * (rows - 1)) / rows
+    return minOf(tile, fit)
+}
 
 internal val LocalPenguinGridLoose = compositionLocalOf { emptyList<TileSpec>() }
 
@@ -193,6 +213,18 @@ internal fun rememberPenguinGridModel(viewModel: QuickSettingsContainerViewModel
 }
 
 @Composable
+internal fun wideControlCentre(): Boolean =
+    LocalPenguinGridFlavor.current == PenguinGrid.Flavor.ControlCentre &&
+        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+@Composable
+internal fun wideGridWidth(): Dp {
+    val cell = wideCell()
+    val columns = PenguinGrid.COLUMNS * 2
+    return cell * columns + PenguinGridGap * (columns - 1) + PenguinGridMargin * 2
+}
+
+@Composable
 internal fun penguinPageHeight(pages: List<List<PenguinGrid.Item>>, extraRows: Int = 0): Dp =
     penguinModuleHeight(max((pages.maxOfOrNull { PenguinGrid.rows(it) } ?: 0) + extraRows, 4))
 
@@ -220,8 +252,11 @@ private fun ContentScope.PenguinGridQuickSettingsContent(
     modifier: Modifier,
 ) {
     val model = rememberPenguinGridModel(viewModel)
-    val pages = model.pages
-    CompositionLocalProvider(LocalPenguinGridLoose provides model.loose) {
+    val cell = if (wideControlCentre()) wideCell() else null
+    CompositionLocalProvider(
+        LocalPenguinGridLoose provides model.loose,
+        LocalPenguinCell provides cell,
+    ) {
         PenguinGridPages(viewModel, model, modifier)
     }
 }
@@ -232,7 +267,11 @@ private fun ContentScope.PenguinGridPages(
     model: PenguinGridModel,
     modifier: Modifier,
 ) {
-    val pages = model.pages
+    val wide = wideControlCentre()
+    val pages = remember(model.pages, wide) {
+        if (wide) model.pages.map(PenguinGrid::foldWide) else model.pages
+    }
+    val columns = if (wide) PenguinGrid.COLUMNS * 2 else PenguinGrid.COLUMNS
 
     val panelVisible = isAlwaysComposedContentVisible()
     val host = LocalQsHostTransition.current ?: qsHostTransition()
@@ -276,7 +315,10 @@ private fun ContentScope.PenguinGridPages(
         modifier =
             modifier
                 .element(Elements.QuickSettingsContent)
-                .fillMaxWidth()
+                .then(
+                    if (wide) Modifier.fillMaxWidth().wrapContentWidth().width(wideGridWidth())
+                    else Modifier.fillMaxWidth()
+                )
                 .sysuiResTag("quick_settings_panel")
     ) {
         Box(Modifier.fillMaxWidth().then(if (settled) Modifier.animateContentSize() else Modifier)) {
@@ -301,6 +343,7 @@ private fun ContentScope.PenguinGridPages(
         ) { page ->
             ControlGrid(
                 pages[page],
+                columns = columns,
                 modifier =
                     Modifier.pointerInput(Unit) {
                         detectTapGestures(
@@ -624,10 +667,11 @@ private fun NotPlaying(height: Dp) {
 internal fun ControlGrid(
     items: List<PenguinGrid.Item>,
     modifier: Modifier = Modifier,
+    columns: Int = PenguinGrid.COLUMNS,
     minHeight: Dp = 0.dp,
     content: @Composable (PenguinGrid.Item) -> Unit,
 ) {
-    val rowHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
+    val rowHeight = penguinCell()
     val gap = PenguinGridGap
     Layout(
         modifier = modifier,
@@ -635,8 +679,7 @@ internal fun ControlGrid(
     ) { measurables, constraints ->
         val gapPx = gap.roundToPx()
         val rowPx = rowHeight.roundToPx()
-        val columnPx =
-            (constraints.maxWidth - gapPx * (PenguinGrid.COLUMNS - 1)) / PenguinGrid.COLUMNS
+        val columnPx = (constraints.maxWidth - gapPx * (columns - 1)) / columns
         val placeables =
             measurables.mapIndexed { index, measurable ->
                 val item = items[index]

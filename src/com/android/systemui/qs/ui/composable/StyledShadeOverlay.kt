@@ -281,13 +281,15 @@ fun ContentScope.StyledOverlayHost(
     val fade =
         remember(layoutState) {
             {
+                val state = layoutState.transitionState
                 val transition = layoutState.currentTransition
+                val shown = contentKey == state.currentScene || contentKey in state.currentOverlays
                 launchFade *
                     when {
-                        transition == null -> 1f
-                        transition.toContent == contentKey -> transition.progress
-                        transition.fromContent == contentKey -> 1f - transition.progress
-                        else -> 1f
+                        transition?.toContent == contentKey -> transition.progress
+                        transition?.fromContent == contentKey -> 1f - transition.progress
+                        shown -> 1f
+                        else -> 0f
                     }
             }
         }

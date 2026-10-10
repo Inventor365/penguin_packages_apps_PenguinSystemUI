@@ -33,6 +33,7 @@ import com.android.systemui.qs.ui.composable.StyledOverlayHost
 import com.android.systemui.qs.ui.composable.StyledQuickSettingsContent
 import com.android.systemui.qs.ui.composable.closeExpansions
 import com.android.systemui.qs.ui.composable.controlCentreTopShown
+import com.android.systemui.qs.ui.composable.controlCentreWide
 import com.android.systemui.qs.ui.composable.qsHostTransition
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
 import com.android.systemui.shade.domain.interactor.ShadeAnimationInteractor
@@ -114,6 +115,10 @@ constructor(
     @Composable
     override fun showsOverlayStatusBar(viewModel: QuickSettingsContainerViewModel): Boolean =
         !controlCentreTopShown(viewModel)
+
+    @Composable
+    override fun wideOverlay(viewModel: QuickSettingsContainerViewModel): Boolean =
+        controlCentreWide(viewModel)
 
     @Composable
     override fun ContentScope.Host(content: @Composable () -> Unit) {
