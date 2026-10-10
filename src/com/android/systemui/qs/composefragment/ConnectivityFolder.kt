@@ -323,16 +323,7 @@ private fun ConnectivityFolderContent(
             uniformGrid = secureIntSetting(SETTING_QS_FOLDER_SPAN, 1) >= 2,
             onDone = { onExpandedChange(false) }.takeIf { showHeader },
             fitHeight = !showHeader && carded,
-            modifier =
-                if (showHeader || !carded || liquidGlassOn) {
-                    modifier
-                } else {
-                    modifier
-                        .clip(RoundedCornerShape(32.dp))
-                        .background(glassSurface())
-                        .glassRim(RoundedCornerShape(32.dp))
-                        .padding(CardPadding)
-                },
+            modifier = modifier,
         )
         return
     }

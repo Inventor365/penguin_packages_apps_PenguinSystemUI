@@ -79,6 +79,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import com.android.compose.animation.scene.ContentScope
+import com.android.systemui.scene.shared.model.Overlays
+import com.android.compose.animation.scene.ElementKey
 import com.android.compose.gesture.gesturesDisabled
 import com.android.compose.modifiers.thenIf
 import com.android.compose.theme.PlatformTheme
@@ -135,6 +137,51 @@ internal fun penguinModuleHeight(rows: Int): Dp {
 internal val LocalPenguinGridFlavor = compositionLocalOf { PenguinGrid.Flavor.ControlCentre }
 
 private val LocalPenguinCell = compositionLocalOf<Dp?> { null }
+
+private val LocalPenguinExpandRequest = compositionLocalOf<(() -> Unit)?> { null }
+
+internal const val QQS_ROWS = 2
+
+@Composable
+fun ContentScope.PenguinQuickQuickSettings(
+    viewModel: QuickSettingsContainerViewModel,
+    onExpandRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    PenguinGridTheme {
+        val model = rememberPenguinGridModel(viewModel)
+        val items =
+            remember(model.pages) {
+                model.pages.firstOrNull().orEmpty().filter { it.bottom <= QQS_ROWS }
+            }
+        var listening by remember { mutableStateOf(false) }
+        LifecycleStartEffect(Unit) {
+            listening = true
+            onStopOrDispose { listening = false }
+        }
+        val mediaShown = viewModel.showMedia && viewModel.hasMediaCards
+        CompositionLocalProvider(
+            LocalPenguinGridLoose provides model.loose,
+            LocalPenguinExpandRequest provides onExpandRequest,
+        ) {
+            ControlGrid(items, modifier = modifier.fillMaxWidth()) { item ->
+                GridItemContent(
+                    viewModel = viewModel,
+                    item = item,
+                    mediaShown = mediaShown,
+                    interactable = true,
+                    listening = { listening },
+                    modifier =
+                        when (item.spec) {
+                            FOLDER_SPEC -> Modifier.element(Elements.ConnectivityFolder)
+                            MEDIA_SPEC -> Modifier.element(PenguinMediaElement)
+                            else -> Modifier
+                        },
+                )
+            }
+        }
+    }
+}
 
 private val WideReservedHeight = 96.dp
 
@@ -268,8 +315,12 @@ private fun ContentScope.PenguinGridPages(
     modifier: Modifier,
 ) {
     val wide = wideControlCentre()
-    val pages = remember(model.pages, wide) {
-        if (wide) model.pages.map(PenguinGrid::foldWide) else model.pages
+    val combined = contentKey != Overlays.QuickSettingsShade
+    val pages = remember(model.pages, wide, combined) {
+        val shown =
+            if (combined) model.pages.filterIndexed { i, page -> i == 0 || !isModulePage(page) }
+            else model.pages
+        if (wide) shown.map(PenguinGrid::foldWide) else shown
     }
     val columns = if (wide) PenguinGrid.COLUMNS * 2 else PenguinGrid.COLUMNS
 
@@ -362,10 +413,11 @@ private fun ContentScope.PenguinGridPages(
                     interactable = interactable,
                     listening = { listening },
                     modifier =
-                        if (page == 0 && item.spec == FOLDER_SPEC) {
-                            Modifier.element(Elements.ConnectivityFolder)
-                        } else {
-                            Modifier
+                        when {
+                            page != 0 -> Modifier
+                            item.spec == FOLDER_SPEC -> Modifier.element(Elements.ConnectivityFolder)
+                            item.spec == MEDIA_SPEC -> Modifier.element(PenguinMediaElement)
+                            else -> Modifier
                         },
                 )
             }
@@ -392,7 +444,7 @@ private fun ContentScope.PenguinGridPages(
         }
         }
 
-        if (pages.size > 1) {
+        if (pages.size > 1 && !combined) {
             PageIcons(
                 pages = pages,
                 current = pagerState.currentPage,
@@ -512,6 +564,7 @@ internal fun ContentScope.GridItemContent(
 ) {
     var bounds by remember { mutableStateOf<Rect?>(null) }
     val open = { PenguinGridOrigin.bounds = bounds }
+    val expandRequest = LocalPenguinExpandRequest.current
     val oneUi = LocalPenguinGridFlavor.current == PenguinGrid.Flavor.OneUi
     val loose = LocalPenguinGridLoose.current
     Box(modifier.onGloballyPositioned { bounds = it.boundsInRoot() }) {
@@ -553,6 +606,7 @@ internal fun ContentScope.GridItemContent(
                         onExpandedChange = {
                             open()
                             ConnectivityFolderExpansion.expanded = it
+                            if (it) expandRequest?.invoke()
                         },
                     )
                 }
@@ -570,6 +624,7 @@ internal fun ContentScope.GridItemContent(
                         onExpand = {
                             open()
                             PenguinMediaExpansion.expanded = true
+                            expandRequest?.invoke()
                         },
                     )
                 } else {
@@ -700,6 +755,11 @@ internal fun ControlGrid(
         }
     }
 }
+
+private fun isModulePage(page: List<PenguinGrid.Item>): Boolean =
+    page.singleOrNull()?.spec.let { it == MEDIA_SPEC || it == FOLDER_SPEC }
+
+internal val PenguinMediaElement = ElementKey("PenguinGridMedia")
 
 internal fun pageIcon(page: List<PenguinGrid.Item>): ImageVector {
     val only = page.singleOrNull()

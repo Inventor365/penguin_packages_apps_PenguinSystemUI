@@ -8,6 +8,7 @@ package com.penguin.systemui.qs
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Density
@@ -17,10 +18,15 @@ import com.android.systemui.penguin.LocalQsPanels
 import com.android.systemui.penguin.QsEditMode
 import com.android.systemui.penguin.QsPanels
 import com.android.systemui.penguin.QsTileStyle
+import com.android.systemui.qs.shared.style.panelStyle
+import com.android.systemui.qs.shared.style.QsPanelStyle
+import com.android.systemui.qs.panels.ui.compose.toolbar.EditModeButton
+import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.qs.composefragment.ConnectivityFolderExpansion
 import com.android.systemui.qs.panels.ui.compose.StyledQsEditMode
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.styledQsTileStyle
 import com.android.systemui.qs.shared.style.LocalGlassBlurAllowed
+import com.android.systemui.qs.shared.style.LocalGlassBlurAlpha
 import com.android.systemui.qs.shared.style.PenguinQsStyle
 import com.android.systemui.qs.shared.style.QsPanelStyleRepository
 import com.android.systemui.qs.panels.ui.viewmodel.toolbar.ToolbarViewModel
@@ -37,6 +43,7 @@ import com.android.systemui.qs.ui.composable.controlCentreWide
 import com.android.systemui.qs.ui.composable.qsHostTransition
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
 import com.android.systemui.shade.domain.interactor.ShadeAnimationInteractor
+import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.shade.ui.composable.StyledShadeHeader
 import com.android.systemui.shade.ui.viewmodel.ShadeSceneContentViewModel
 import javax.inject.Inject
@@ -46,6 +53,7 @@ class PenguinQsPanels
 constructor(
     styleRepository: QsPanelStyleRepository,
     private val shadeAnimationInteractor: ShadeAnimationInteractor,
+    private val shadeInteractor: ShadeInteractor,
 ) : QsPanels {
 
     init {
@@ -61,7 +69,9 @@ constructor(
     ) {
         val mirror = viewModel.brightnessSliderViewModel
         HideGlassWhileMirroring({ mirror.showMirror }) {
-            StyledQuickSettingsContent(viewModel, mediaInRow, modifier, mediaSquishiness)
+            FadeGlassWithShade {
+                StyledQuickSettingsContent(viewModel, mediaInRow, modifier, mediaSquishiness)
+            }
         }
     }
 
@@ -74,7 +84,9 @@ constructor(
     ) {
         val mirror = viewModel.qsContainerViewModel.brightnessSliderViewModel
         HideGlassWhileMirroring({ mirror.showMirror }) {
-            StyledShadeHeader(viewModel, mediaInRow, horizontalPadding, visualOffset)
+            FadeGlassWithShade {
+                StyledShadeHeader(viewModel, mediaInRow, horizontalPadding, visualOffset)
+            }
         }
     }
 
@@ -117,6 +129,16 @@ constructor(
         !controlCentreTopShown(viewModel)
 
     @Composable
+    override fun FooterAction(viewModel: QuickSettingsContainerViewModel) {
+        if (viewModel.panelStyle != QsPanelStyle.Penguin) return
+        val editButton =
+            rememberViewModel(traceName = "PenguinFooterEdit") {
+                viewModel.editModeButtonViewModelFactory.create()
+            }
+        EditModeButton(viewModel = editButton, isVisible = true)
+    }
+
+    @Composable
     override fun wideOverlay(viewModel: QuickSettingsContainerViewModel): Boolean =
         controlCentreWide(viewModel)
 
@@ -133,6 +155,17 @@ constructor(
         val open = ConnectivityFolderExpansion.expanded || PenguinMediaExpansion.expanded
         if (open) closeExpansions()
         return open
+    }
+
+    @Composable
+    private fun FadeGlassWithShade(content: @Composable () -> Unit) {
+        val outer = LocalGlassBlurAlpha.current
+        val expansion = shadeInteractor.anyExpansion.collectAsState()
+        val launching = shadeAnimationInteractor.isLaunchingActivity.collectAsState()
+        val fade = remember(outer) {
+            { if (launching.value) 0f else outer() * expansion.value.coerceIn(0f, 1f) }
+        }
+        CompositionLocalProvider(LocalGlassBlurAlpha provides fade) { content() }
     }
 
     @Composable

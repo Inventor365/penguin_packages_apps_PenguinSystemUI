@@ -32,6 +32,8 @@ import com.android.systemui.qs.composefragment.ConnectivityFolder
 import com.android.systemui.qs.composefragment.MyUiGridGap
 import com.android.systemui.qs.composefragment.MyUiMediaCard
 import com.android.systemui.qs.composefragment.PenguinMediaCard
+import com.android.systemui.qs.ui.composable.PenguinGridMargin
+import com.android.systemui.qs.ui.composable.PenguinQuickQuickSettings
 import com.android.systemui.qs.composefragment.SETTING_QS_MEDIA_SPAN
 import com.android.systemui.qs.composefragment.SETTING_QS_MEDIA_STYLE
 import com.android.systemui.qs.composefragment.SETTING_QS_MEDIA_POSITION
@@ -188,6 +190,23 @@ fun ContentScope.StyledShadeHeader(
     val qsHorizontalMargin =
         shadeHorizontalPadding + dimensionResource(id = R.dimen.qs_horizontal_margin)
     CompositionLocalProvider(LocalQsPanelStyle provides viewModel.panelStyle) {
+    if (viewModel.panelStyle == QsPanelStyle.Penguin && viewModel.isQsEnabled) {
+        PenguinQuickQuickSettings(
+            viewModel = viewModel.qsContainerViewModel,
+            onExpandRequest = {
+                viewModel.expandQuickSettings("Penguin module expanded from QQS.")
+            },
+            modifier =
+                Modifier.element(QuickSettings.Elements.QuickQuickSettingsAndMedia)
+                    .offset {
+                        val down = visualOffsetProvider().fastCoerceAtLeast(0)
+                        IntOffset(x = 0, y = down / 2)
+                    }
+                    .padding(bottom = qqsLayoutPaddingBottom)
+                    .padding(horizontal = shadeHorizontalPadding + PenguinGridMargin),
+        )
+        return@CompositionLocalProvider
+    }
     MediaAndQqsLayout(
         modifier =
             Modifier.element(QuickSettings.Elements.QuickQuickSettingsAndMedia)
