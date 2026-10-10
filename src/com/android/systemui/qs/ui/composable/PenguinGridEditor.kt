@@ -89,6 +89,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -123,6 +124,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.compose.animation.scene.ContentScope
 import com.android.compose.gesture.gesturesDisabled
 import com.android.compose.theme.LocalAndroidColorScheme
+import com.android.systemui.scene.shared.model.Overlays
 import com.android.systemui.qs.panels.ui.compose.FOLDER_SPEC
 import com.android.systemui.qs.panels.ui.compose.MEDIA_SPEC
 import com.android.systemui.qs.panels.ui.compose.PenguinGrid
@@ -200,13 +202,29 @@ private fun ContentScope.PenguinGridEditorContent(
     val latestModel by rememberUpdatedState(model)
     var optimistic by remember { mutableStateOf<List<List<Item>>?>(null) }
     LaunchedEffect(model.pages) { optimistic = null }
-    val pages = optimistic ?: model.pages
+    val combined = contentKey != Overlays.QuickSettingsShade
+    val hiddenPage: (Int, List<Item>) -> Boolean = { index, page ->
+        combined && index != 0 && page.singleOrNull()?.spec.let { it == MEDIA_SPEC || it == FOLDER_SPEC }
+    }
+    val fullPages = optimistic ?: model.pages
+    val pages = fullPages.filterIndexed { index, page -> !hiddenPage(index, page) }
+    fun expand(shown: List<List<Item>>): List<List<Item>> {
+        if (!combined) return shown
+        val remaining = shown.iterator()
+        val out = mutableListOf<List<Item>>()
+        fullPages.forEachIndexed { index, page ->
+            if (hiddenPage(index, page)) out.add(page) else if (remaining.hasNext()) out.add(remaining.next())
+        }
+        while (remaining.hasNext()) out.add(remaining.next())
+        return out
+    }
     CompositionLocalProvider(LocalPenguinGridLoose provides model.loose) {
     val mediaShown = viewModel.showMedia && viewModel.hasMediaCards
     val editTiles by editViewModel.tiles.collectAsStateWithLifecycle(emptyList())
     val tilesBySpec = remember(editTiles) { editTiles.associateBy { it.tileSpec } }
 
-    fun commit(next: List<List<Item>>) {
+    fun commit(shownNext: List<List<Item>>) {
+        val next = expand(shownNext)
         val shown = next.flatten().map { it.spec }.toSet()
         val pending =
             latestModel.saved.orEmpty().mapIndexed { index, page ->
@@ -337,7 +355,7 @@ private fun ContentScope.PenguinGridEditorContent(
                     Settings.Secure.putString(
                         resolver,
                         flavor.setting,
-                        PenguinGrid.serialize(next),
+                        PenguinGrid.serialize(expand(next)),
                     )
                     if (spec !in model.loose) editViewModel.addTile(spec)
                     adding = false
@@ -1280,6 +1298,7 @@ private fun AddControlSheet(
     BackHandler { onDismiss() }
     val tiles by viewModel.editModeViewModel.tiles.collectAsStateWithLifecycle(emptyList())
     var query by remember { mutableStateOf("") }
+    DisposableEffect(Unit) { onDispose { viewModel.setTextInputActive(false) } }
     val moduleNames =
         mapOf(
             MEDIA_SPEC to stringResource(R.string.penguin_cc_media),
@@ -1350,7 +1369,10 @@ private fun AddControlSheet(
                                 color = MaterialTheme.colorScheme.onSurface
                             ),
                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier =
+                            Modifier.fillMaxWidth().onFocusChanged {
+                                viewModel.setTextInputActive(it.isFocused)
+                            },
                     )
                 }
             }
