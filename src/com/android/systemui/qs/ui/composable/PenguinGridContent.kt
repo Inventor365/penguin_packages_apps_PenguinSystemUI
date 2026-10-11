@@ -109,6 +109,7 @@ import com.android.systemui.qs.shared.ui.QuickSettings.Elements
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
 import com.android.systemui.res.R
 import kotlin.math.max
+import kotlin.math.min
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 
@@ -733,24 +734,26 @@ internal fun ControlGrid(
         content = { items.forEach { item -> key(item.spec) { Box { content(item) } } } },
     ) { measurables, constraints ->
         val gapPx = gap.roundToPx()
-        val rowPx = rowHeight.roundToPx()
-        val columnPx = (constraints.maxWidth - gapPx * (columns - 1)) / columns
+        val cellPx =
+            min(rowHeight.roundToPx(), (constraints.maxWidth - gapPx * (columns - 1)) / columns)
+        val gapXPx =
+            if (columns > 1) (constraints.maxWidth - cellPx * columns) / (columns - 1) else 0
         val placeables =
             measurables.mapIndexed { index, measurable ->
                 val item = items[index]
                 measurable.measure(
                     Constraints.fixed(
-                        width = columnPx * item.w + gapPx * (item.w - 1),
-                        height = rowPx * item.h + gapPx * (item.h - 1),
+                        width = cellPx * item.w + gapXPx * (item.w - 1),
+                        height = cellPx * item.h + gapPx * (item.h - 1),
                     )
                 )
             }
         val rows = PenguinGrid.rows(items)
-        val height = (rowPx * rows + gapPx * (rows - 1)).coerceAtLeast(0)
+        val height = (cellPx * rows + gapPx * (rows - 1)).coerceAtLeast(0)
         layout(constraints.maxWidth, max(height, minHeight.roundToPx())) {
             placeables.forEachIndexed { index, placeable ->
                 val item = items[index]
-                placeable.place(item.x * (columnPx + gapPx), item.y * (rowPx + gapPx))
+                placeable.place(item.x * (cellPx + gapXPx), item.y * (cellPx + gapPx))
             }
         }
     }
