@@ -39,6 +39,7 @@ import com.android.systemui.qs.ui.composable.StyledOverlayHost
 import com.android.systemui.qs.ui.composable.StyledQuickSettingsContent
 import com.android.systemui.qs.ui.composable.closeExpansions
 import com.android.systemui.qs.ui.composable.controlCentreTopShown
+import com.android.systemui.qs.ui.composable.LocalPenguinQsArrival
 import com.android.systemui.qs.ui.composable.controlCentreWide
 import com.android.systemui.qs.ui.composable.qsHostTransition
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
@@ -70,7 +71,11 @@ constructor(
         val mirror = viewModel.brightnessSliderViewModel
         HideGlassWhileMirroring({ mirror.showMirror }) {
             FadeGlassWithShade {
-                StyledQuickSettingsContent(viewModel, mediaInRow, modifier, mediaSquishiness)
+                val qsExpansion = shadeInteractor.qsExpansion.collectAsState()
+                val arrival = remember { { qsExpansion.value } }
+                CompositionLocalProvider(LocalPenguinQsArrival provides arrival) {
+                    StyledQuickSettingsContent(viewModel, mediaInRow, modifier, mediaSquishiness)
+                }
             }
         }
     }

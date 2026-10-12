@@ -106,6 +106,7 @@ import com.android.systemui.qs.panels.ui.compose.PenguinGrid
 import com.android.systemui.qs.panels.ui.compose.TileGrid
 import com.android.systemui.qs.pipeline.shared.TileSpec
 import com.android.systemui.qs.shared.ui.QuickSettings.Elements
+import com.android.systemui.qs.shared.ui.slider.SharedSliderKey
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
 import com.android.systemui.res.R
 import kotlin.math.max
@@ -140,6 +141,8 @@ internal val LocalPenguinGridFlavor = compositionLocalOf { PenguinGrid.Flavor.Co
 private val LocalPenguinCell = compositionLocalOf<Dp?> { null }
 
 private val LocalPenguinExpandRequest = compositionLocalOf<(() -> Unit)?> { null }
+
+internal val LocalPenguinQsArrival = compositionLocalOf<() -> Float> { { 1f } }
 
 internal const val QQS_ROWS = 2
 
@@ -176,6 +179,8 @@ fun ContentScope.PenguinQuickQuickSettings(
                         when (item.spec) {
                             FOLDER_SPEC -> Modifier.element(Elements.ConnectivityFolder)
                             MEDIA_SPEC -> Modifier.element(PenguinMediaElement)
+                            PenguinGrid.BRIGHTNESS_SPEC -> Modifier.element(SharedSliderKey.Brightness)
+                            PenguinGrid.VOLUME_SPEC -> Modifier.element(SharedSliderKey.Volume)
                             else -> Modifier
                         },
                 )
@@ -377,6 +382,9 @@ private fun ContentScope.PenguinGridPages(
         val panelBlurAlpha = LocalGlassBlurAlpha.current
         val gridBlurAlpha =
             remember(panelBlurAlpha) { { panelBlurAlpha() * (1f - progress.value) } }
+        val arrival = LocalPenguinQsArrival.current
+        val arrivingGlass =
+            remember(gridBlurAlpha, arrival) { { gridBlurAlpha() * arrival().coerceIn(0f, 1f) } }
         CompositionLocalProvider(LocalGlassBlurAlpha provides gridBlurAlpha) {
         VerticalPager(
             state = pagerState,
@@ -407,6 +415,10 @@ private fun ContentScope.PenguinGridPages(
                     },
                 minHeight = pageHeight,
             ) { item ->
+                val inQqs = page == 0 && item.bottom <= QQS_ROWS
+                CompositionLocalProvider(
+                    LocalGlassBlurAlpha provides if (combined && !inQqs) arrivingGlass else gridBlurAlpha
+                ) {
                 GridItemContent(
                     viewModel = viewModel,
                     item = item,
@@ -418,9 +430,14 @@ private fun ContentScope.PenguinGridPages(
                             page != 0 -> Modifier
                             item.spec == FOLDER_SPEC -> Modifier.element(Elements.ConnectivityFolder)
                             item.spec == MEDIA_SPEC -> Modifier.element(PenguinMediaElement)
+                            item.spec == PenguinGrid.BRIGHTNESS_SPEC ->
+                                Modifier.element(SharedSliderKey.Brightness)
+                            item.spec == PenguinGrid.VOLUME_SPEC ->
+                                Modifier.element(SharedSliderKey.Volume)
                             else -> Modifier
                         },
                 )
+                }
             }
         }
         }
