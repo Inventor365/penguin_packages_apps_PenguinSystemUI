@@ -6,3 +6,8 @@
 -keep class com.android.systemui.smartspace.** { *; }
 -keep class android.hardware.** { *; }
 -keep class com.google.** { *; }
+
+# Looked up by name when the COS library is linked
+-keep class com.penguin.cos.systemui.CosBrightnessSlider { public static *; }
+-keep class com.penguin.cos.systemui.CosSpring { *; }
+-dontwarn com.penguin.cos.systemui.**

@@ -519,6 +519,7 @@ fun BrightnessLayout(
         Unit
     }
 
+    val cosExperience = rememberCosExperience()
     val commonModifier =
         Modifier.systemGestureExclusionInShade(enabled = { enable })
 
@@ -543,6 +544,16 @@ fun BrightnessLayout(
                     modifier = Modifier,
                     housingHeight = sliderHeight,
                     interactive = interactive,
+                )
+            } else if (cosExperience) {
+                AndroidView(
+                    factory = { ctx ->
+                        CosHooks.createBrightnessSlider(ctx) { fraction, finished ->
+                            if (finished) onValueChangeFinished(fraction) else onValueChanged(fraction)
+                        }
+                    },
+                    update = { view -> CosHooks.setBrightnessFraction(view, sliderValue) },
+                    modifier = Modifier.size(width = verticalWidth ?: 75.dp, height = sliderHeight),
                 )
             } else {
                 VerticalSlider(

@@ -7,6 +7,7 @@ package com.penguin.systemui.qs
 
 import androidx.compose.foundation.OverscrollFactory
 import androidx.compose.runtime.Composable
+import com.android.systemui.qs.composefragment.rememberCosExperience
 import com.android.compose.animation.scene.SceneTransitionsBuilder
 import com.android.compose.animation.scene.TransitionBuilder
 import com.android.compose.gesture.effect.rememberControlCentreOverscrollEffectFactory
@@ -14,6 +15,9 @@ import com.android.systemui.penguin.ShadeMotion
 import com.android.systemui.qs.composefragment.effectiveQsPanelStyle
 import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.scene.shared.model.Overlays
+import com.android.systemui.scene.ui.composable.transitions.cosFromQuickSettingsShadeTransition
+import com.android.systemui.scene.ui.composable.transitions.cosSpring
+import com.android.systemui.scene.ui.composable.transitions.cosToQuickSettingsShadeTransition
 import com.android.systemui.scene.ui.composable.transitions.notificationsToQuickSettingsShadeTransition
 import com.android.systemui.scene.ui.composable.transitions.styledFromQuickSettingsShadeTransition
 import com.android.systemui.scene.ui.composable.transitions.styledQuickSettingsToShadeTransition
@@ -24,11 +28,13 @@ import javax.inject.Inject
 
 class PenguinShadeMotion @Inject constructor() : ShadeMotion {
     private var defaultQsStyle = false
+    private var cos = false
 
     @Composable
     override fun key(): Any? {
         defaultQsStyle = effectiveQsPanelStyle() == QsPanelStyle.Default
-        return defaultQsStyle
+        cos = rememberCosExperience()
+        return defaultQsStyle to cos
     }
 
     override fun TransitionBuilder.shadeToQuickSettings(animateQsTilesAsShared: () -> Boolean) {
@@ -46,11 +52,12 @@ class PenguinShadeMotion @Inject constructor() : ShadeMotion {
     }
 
     override fun TransitionBuilder.toQuickSettingsShade(durationScale: Double) {
-        styledToQuickSettingsShadeTransition(durationScale = durationScale)
+        if (cos) cosToQuickSettingsShadeTransition(durationScale)
+        else styledToQuickSettingsShadeTransition(durationScale = durationScale)
     }
 
     override fun TransitionBuilder.fromQuickSettingsShade() {
-        styledFromQuickSettingsShadeTransition()
+        if (cos) cosFromQuickSettingsShadeTransition() else styledFromQuickSettingsShadeTransition()
     }
 
     override fun TransitionBuilder.toNotificationsShade(
@@ -61,6 +68,7 @@ class PenguinShadeMotion @Inject constructor() : ShadeMotion {
             durationScale = durationScale,
             enableSharedElements = enableSharedElements,
         )
+        if (cos) spec = cosSpring(0.2, durationScale)
     }
 
     override fun SceneTransitionsBuilder.overlaySwitchTransitions() {

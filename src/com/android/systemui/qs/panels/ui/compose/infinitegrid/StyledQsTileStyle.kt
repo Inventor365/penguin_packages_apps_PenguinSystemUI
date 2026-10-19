@@ -5,6 +5,7 @@
 
 package com.android.systemui.qs.panels.ui.compose.infinitegrid
 
+import com.android.systemui.qs.composefragment.cosTileReveal
 import android.os.SystemClock
 import android.service.quicksettings.Tile.STATE_ACTIVE
 import android.service.quicksettings.Tile.STATE_INACTIVE
@@ -85,7 +86,8 @@ private class StyledQsTileStyle(
         }
     }
 
-    @Composable override fun Modifier.containerBehaviour(): Modifier = liquidGlassPress(glass)
+    @Composable override fun Modifier.containerBehaviour(): Modifier =
+        liquidGlassPress(glass).cosTileReveal()
 
     @Composable
     override fun colorSpec(): AnimationSpec<Color> {
