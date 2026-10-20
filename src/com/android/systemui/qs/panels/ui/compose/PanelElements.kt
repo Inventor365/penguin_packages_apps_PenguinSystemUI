@@ -443,7 +443,7 @@ class StyledQsEditMode : QsEditMode {
 
     @Composable
     private fun folderMemberSpecs(panelStyle: QsPanelStyle): List<String> =
-        if (panelStyle != QsPanelStyle.Default && connectivityFolderEnabled()) {
+        if (!panelStyle.stockLayout && connectivityFolderEnabled()) {
             connectivityFolderSpecs()
         } else {
             emptyList()

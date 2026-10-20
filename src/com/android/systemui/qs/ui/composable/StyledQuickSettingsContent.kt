@@ -167,7 +167,8 @@ fun ContentScope.StyledQuickSettingsContent(
 ) {
     CompositionLocalProvider(LocalQsPanelStyle provides viewModel.panelStyle) {
         when (viewModel.panelStyle) {
-            QsPanelStyle.Default ->
+            QsPanelStyle.Default,
+            QsPanelStyle.Stock ->
                 DefaultQuickSettingsContent(viewModel, mediaInRow, modifier, mediaSquishiness)
             QsPanelStyle.Penguin -> PenguinGridQuickSettings(viewModel, modifier)
             QsPanelStyle.MyUi ->

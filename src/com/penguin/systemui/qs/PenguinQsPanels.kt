@@ -148,6 +148,10 @@ constructor(
         controlCentreWide(viewModel)
 
     @Composable
+    override fun stockOverlay(viewModel: QuickSettingsContainerViewModel): Boolean =
+        viewModel.panelStyle == QsPanelStyle.Stock
+
+    @Composable
     override fun ContentScope.Host(content: @Composable () -> Unit) {
         CompositionLocalProvider(LocalQsHostTransition provides qsHostTransition()) { content() }
     }

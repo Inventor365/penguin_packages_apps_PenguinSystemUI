@@ -23,4 +23,4 @@ val LocalQsPanelStyle = compositionLocalOf { QsPanelStyle.Penguin }
 val isStockQsStyle: Boolean
     @androidx.compose.runtime.Composable
     @androidx.compose.runtime.ReadOnlyComposable
-    get() = LocalQsPanelStyle.current == QsPanelStyle.Default
+    get() = LocalQsPanelStyle.current.stockLayout

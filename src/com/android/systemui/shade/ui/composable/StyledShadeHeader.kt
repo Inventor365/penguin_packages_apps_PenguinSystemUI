@@ -179,7 +179,7 @@ fun ContentScope.StyledShadeHeader(
     shadeHorizontalPadding: Dp,
     visualOffsetProvider: Density.() -> Int,
 ) {
-    val isDefaultStyle = viewModel.panelStyle == QsPanelStyle.Default
+    val isDefaultStyle = viewModel.panelStyle.stockLayout
     val isHarmonyStyle = viewModel.panelStyle == QsPanelStyle.Harmony
     val isColorOsStyle = viewModel.panelStyle == QsPanelStyle.ColorOs
     val isMyUiStyle =
