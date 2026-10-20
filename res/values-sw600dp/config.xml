@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     SPDX-FileCopyrightText: The PenguinOS Project
+     SPDX-License-Identifier: Apache-2.0
+-->
+<resources>
+    <!-- Whether the communal (glanceable hub) service is enabled -->
+    <bool name="config_communalServiceEnabled">true</bool>
+    <!-- Whether or not to show the UMO on the glanceable hub when media is playing -->
+    <bool name="config_showUmoOnHub">true</bool>
+</resources>
