@@ -15,7 +15,6 @@ import com.android.compose.animation.scene.ContentKey
 import com.android.compose.animation.scene.Edge
 import com.android.compose.animation.scene.ElementKey
 import com.android.compose.animation.scene.ElementMatcher
-import com.android.compose.animation.scene.FixedDistance
 import com.android.compose.animation.scene.TransitionBuilder
 import com.android.compose.animation.scene.UserActionDistance
 import com.android.compose.animation.scene.reveal.ContainerRevealHaptics
@@ -37,10 +36,9 @@ import kotlin.time.Duration.Companion.milliseconds
 fun TransitionBuilder.styledToQuickSettingsShadeTransition(
     durationScale: Double = 1.0,
 ) {
-    spec = controlCentreSpring(durationScale)
-    distance = FixedDistance(200.dp)
+    spec = overlayShadeSpring(durationScale)
 
-    controlCentreReveal(QuickSettingsShade.Elements.Panel)
+    oxygenPanelReveal(QuickSettingsShade.Elements.Panel)
 
     fractionRange(end = .5f) { fade(OverlayShade.Elements.Scrim) }
     fractionRange(start = .5f) {
