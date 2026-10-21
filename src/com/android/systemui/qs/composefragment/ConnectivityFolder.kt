@@ -301,8 +301,20 @@ private fun ConnectivityFolderContent(
 ) {
     val bySpec = remember(tiles) { tiles.associateBy { it.spec.spec } }
     val (largeSpecs, smallSpecs) = folderSpecs()
-    val large = remember(bySpec, largeSpecs) { largeSpecs.mapNotNull { bySpec[it] } }
-    val small = remember(bySpec, smallSpecs) { smallSpecs.mapNotNull { bySpec[it] } }
+    val (large, small) =
+        remember(bySpec, largeSpecs, smallSpecs) {
+            val large = largeSpecs.mapNotNull { bySpec[it] }.toMutableList()
+            val small = smallSpecs.mapNotNull { bySpec[it] }.toMutableList()
+            // A device without one of the large tiles (a tablet has no mobile data) would leave
+            // its big slot empty and crowd the rest into the small cluster. Fill the slot from
+            // the small tiles instead, Bluetooth first.
+            while (large.size < largeSpecs.size && small.isNotEmpty()) {
+                val next = small.firstOrNull { it.spec.spec == "bt" } ?: small.first()
+                small.remove(next)
+                large.add(next)
+            }
+            large.toList() to small.toList()
+        }
 
     if (large.isEmpty() && small.isEmpty()) return
 
