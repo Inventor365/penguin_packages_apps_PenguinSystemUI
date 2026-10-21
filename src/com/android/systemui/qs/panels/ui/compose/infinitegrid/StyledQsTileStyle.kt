@@ -72,7 +72,9 @@ private class StyledQsTileStyle(
 
     override val roundIconTiles: Boolean = glassTiles
 
-    override fun icon(spec: String, icon: Icon): Icon = LiquidGlassGlyphs.swap(spec, icon)
+    // The stock style keeps the tiles' own icons; the Liquid Glass glyphs belong to its tiles.
+    override fun icon(spec: String, icon: Icon): Icon =
+        if (stock) icon else LiquidGlassGlyphs.swap(spec, icon)
 
     override fun roundIconSize(tileHeight: Dp): Dp = tileHeight * LiquidGlassTune.f("icon_scale", 0.5f)
 
