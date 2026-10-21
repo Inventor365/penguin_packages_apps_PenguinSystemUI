@@ -18,6 +18,7 @@ package com.android.systemui.keyguard.ui.composable.media
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
@@ -124,12 +126,14 @@ fun LockscreenExpandedMediaArt(
 
     var origin by remember { mutableStateOf(Offset.Zero) }
     var height by remember { mutableStateOf(0f) }
+    var width by remember { mutableStateOf(0f) }
     Box(
         modifier
             .fillMaxSize()
             .onGloballyPositioned {
                 origin = it.positionInWindow()
                 height = it.size.height.toFloat()
+                width = it.size.width.toFloat()
             }
             .graphicsLayer {
                 this.alpha = alpha()
@@ -183,7 +187,18 @@ fun LockscreenExpandedMediaArt(
 
         val gap = with(density) { CoverGap.toPx() }
         val rise = Offset(0f, unlocking() * height)
-        val slot = state.artSlotBounds.translate(-origin + rise)
+        // Layouts without a reserved art slot (the wide tablet ones) get a cover of their own: in
+        // landscape on the start side, below the player; in portrait centred under it.
+        val slot =
+            if (state.artSlotBounds.isEmpty) {
+                if (width > height) {
+                    Rect(0.06f * width, 0.30f * height, 0.48f * width, 0.86f * height)
+                } else {
+                    Rect(0.12f * width, 0.30f * height, 0.88f * width, 0.66f * height)
+                }.translate(rise)
+            } else {
+                state.artSlotBounds.translate(-origin + rise)
+            }
         val side = minOf(slot.width, slot.height - gap).coerceAtLeast(0f)
         val to =
             Rect(
@@ -210,6 +225,7 @@ fun LockscreenExpandedMediaArt(
                     this.alpha = lerp(1f, side.within(minSide * 0.6f, minSide), f) * coverAlpha
                 }
                 .clip(RoundedCornerShape(lerp(10f, 22f, f).dp))
+                .pointerInput(Unit) { detectTapGestures { state.collapse() } }
         ) {
             Artwork(artwork, Modifier.fillMaxSize())
             squareArt?.let { MotionArtVideo(it, Modifier.fillMaxSize()) }

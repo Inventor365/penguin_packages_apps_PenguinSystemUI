@@ -49,6 +49,9 @@ object LockscreenMediaExpansion {
 
     var supported by mutableStateOf(false)
 
+    /** Set while the player card is on screen, in any lock screen layout. */
+    var cardShown by mutableStateOf(false)
+
     var mediaVisible by mutableStateOf(false)
 
     var notificationsShowing by mutableStateOf(false)
@@ -73,11 +76,14 @@ object LockscreenMediaExpansion {
     val fraction: Float
         get() = progress.value.coerceIn(0f, 1f)
 
+    private val canExpand: Boolean
+        get() = supported || cardShown
+
     val target: Boolean
-        get() = enabled && expanded && supported && mediaVisible && artwork != null
+        get() = enabled && expanded && canExpand && mediaVisible && artwork != null
 
     fun toggle() {
-        if (!enabled || !supported || artwork == null) return
+        if (!enabled || !canExpand || artwork == null) return
         persistExpanded(!expanded)
     }
 
