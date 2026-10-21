@@ -27,8 +27,15 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import org.json.JSONArray
+import org.json.JSONTokener
+import org.json.JSONException
 
 internal object MotionArt {
     enum class Kind(val key: String, val targetWidth: Int, val suffix: String) {
@@ -44,74 +51,130 @@ internal object MotionArt {
     private const val MAX_CACHED = 40
 
     private val albums = ConcurrentHashMap<String, String>()
-    private const val NONE = ""
+    private val releaseAliases = ConcurrentHashMap<String, String>()
+    private val lookupMutex = Mutex()
+    private const val MAX_RELEASES = 6
 
     suspend fun find(context: Context, artist: String, title: String, kind: Kind): File? =
         withContext(Dispatchers.IO) {
-            if (artist.isBlank() || title.isBlank()) return@withContext null
-            val dir = File(context.createDeviceProtectedStorageContext().cacheDir, "motion_art")
-            val key = "$artist\u0000$title\u0000$kind"
-            val known = albums[key]
-            if (known != null) {
-                return@withContext known.takeIf { it != NONE }
-                    ?.let { File(dir, "$it${kind.suffix}.mp4") }
-                    ?.takeIf { it.exists() }
-            }
-            try {
-                val album = findAlbum(artist, title)
-                if (album == null) {
-                    albums[key] = NONE
-                    return@withContext null
+            lookupMutex.withLock {
+                if (normalise(artist).isBlank() || normalise(title).isBlank()) return@withLock null
+                val dir = File(context.createDeviceProtectedStorageContext().cacheDir, "motion_art")
+                val key = normalise(artist) + "\u0000" + normalise(title) + "\u0000" + kind
+                fun cached(id: String): File? =
+                    File(dir, id + kind.suffix + ".mp4").takeIf { it.isFile && it.length() > 0 }
+                        ?.also { it.setLastModified(System.currentTimeMillis()) }
+                albums[key]?.let { id ->
+                    cached(id)?.let { return@withLock it }
+                    albums.remove(key)
                 }
-                val (id, page) = album
-                val cached = File(dir, "$id${kind.suffix}.mp4")
-                if (!cached.exists() && !download(page, kind, cached)) {
-                    albums[key] = NONE
-                    return@withContext null
+                try {
+                    val queue = ArrayDeque(findAlbums(artist, title))
+                    val visited = mutableSetOf<String>()
+                    val parents = mutableMapOf<String, String>()
+                    while (queue.isNotEmpty() && visited.size < MAX_RELEASES) {
+                        currentCoroutineContext().ensureActive()
+                        val (id, page) = queue.removeFirst()
+                        if (!visited.add(id)) continue
+                        val resolved = releaseAliases["$id\u0000$kind"] ?: id
+                        cached(resolved)?.let {
+                            albums[key] = resolved
+                            return@withLock it
+                        }
+                        try {
+                            val html = fetch(page)
+                            currentCoroutineContext().ensureActive()
+                            val target = File(dir, id + kind.suffix + ".mp4")
+                            if (download(html, kind, target)) {
+                                albums[key] = id
+                                var parent = parents[id]
+                                while (parent != null) {
+                                    releaseAliases["$parent\u0000$kind"] = id
+                                    parent = parents[parent]
+                                }
+                                trim(dir)
+                                Log.d(TAG, "Resolved $kind animation from release $id")
+                                return@withLock target
+                            }
+                            alternateAlbums(html).forEach {
+                                if (it.first !in visited && !parents.containsKey(it.first)) {
+                                    parents[it.first] = id
+                                    queue.addLast(it)
+                                }
+                            }
+                        } catch (e: IOException) {
+                            Log.w(TAG, "Release $id ($kind) lookup failed: " + e.message)
+                        }
+                    }
+                    Log.d(TAG, "No $kind animation in " + visited.size + " matching releases")
+                } catch (e: IOException) {
+                    Log.w(TAG, "Motion art search failed: " + e.message)
+                } catch (e: JSONException) {
+                    Log.w(TAG, "Invalid motion art search response", e)
                 }
-                albums[key] = id
-                cached.setLastModified(System.currentTimeMillis())
-                trim(dir)
-                cached
-            } catch (e: IOException) {
-                Log.w(TAG, "Motion art lookup failed: $e")
+                // Misses are retried; a transient failure must not poison this process's cache.
                 null
             }
         }
 
-    private fun findAlbum(artist: String, title: String): Pair<String, String>? {
-        val country = Locale.getDefault().country.lowercase().ifEmpty { "us" }
+    private fun findAlbums(artist: String, title: String): List<Pair<String, String>> {
+        val country = Locale.getDefault().country.lowercase(Locale.ROOT).ifEmpty { "us" }
         val term = URLEncoder.encode("$artist $title", "UTF-8")
-        val json =
-            JSONObject(
-                fetch(
-                    "https://itunes.apple.com/search?term=$term&entity=song&limit=10" +
-                        "&country=$country"
-                )
-            )
-        val results = json.optJSONArray("results") ?: return null
+        val json = JSONObject(fetch(
+            "https://itunes.apple.com/search?term=$term&entity=song&limit=25&country=$country"
+        ))
+        val results = json.optJSONArray("results") ?: return emptyList()
         val wantedArtist = normalise(artist)
         val wantedTitle = normalise(title)
+        val found = linkedMapOf<String, String>()
         for (i in 0 until results.length()) {
-            val song = results.getJSONObject(i)
-            val songArtist = normalise(song.optString("artistName"))
-            val songTitle = normalise(song.optString("trackName"))
-            val artistMatches =
-                songArtist.contains(wantedArtist) || wantedArtist.contains(songArtist)
-            val titleMatches = songTitle.startsWith(wantedTitle) || wantedTitle.startsWith(songTitle)
-            if (!artistMatches || !titleMatches) continue
+            val song = results.optJSONObject(i) ?: continue
+            if (normalise(song.optString("artistName")) != wantedArtist ||
+                normalise(song.optString("trackName")) != wantedTitle) continue
             val id = song.optLong("collectionId").takeIf { it > 0 } ?: continue
             val page = song.optString("collectionViewUrl").substringBefore('?')
-            if (page.isNotEmpty()) return id.toString() to page
+            if (isAlbumPage(page)) found[id.toString()] = page
         }
-        return null
+        return found.map { it.key to it.value }
+    }
+
+    private fun isAlbumPage(page: String): Boolean = try {
+        val url = URL(page)
+        url.protocol == "https" && url.host == "music.apple.com" && "/album/" in url.path
+    } catch (_: IOException) { false }
+
+    private fun alternateAlbums(html: String): List<Pair<String, String>> {
+        val data = Regex("""<script\b[^>]*\bid=["']serialized-server-data["'][^>]*>([\s\S]*?)</script>""")
+            .find(html)?.groupValues?.get(1) ?: return emptyList()
+        val found = linkedMapOf<String, String>()
+        fun visit(value: Any?) {
+            when (value) {
+                is JSONObject -> {
+                    if (value.optString("id") == "other-versions - other-versions") {
+                        val items = value.optJSONArray("items") ?: return
+                        for (i in 0 until items.length()) {
+                            val item = items.optJSONObject(i)?.optJSONObject("contentDescriptor") ?: continue
+                            val id = item.optJSONObject("identifiers")?.optString("storeAdamID").orEmpty()
+                            val page = item.optString("url")
+                            if (id.toLongOrNull() != null && isAlbumPage(page)) found[id] = page
+                        }
+                    } else {
+                        value.keys().forEach { visit(value.opt(it)) }
+                    }
+                }
+                is JSONArray -> for (i in 0 until value.length()) visit(value.opt(i))
+            }
+        }
+        try { visit(JSONTokener(data).nextValue()) } catch (e: JSONException) {
+            Log.w(TAG, "Cannot read alternate album releases", e)
+        }
+        return found.map { it.key to it.value }.take(MAX_RELEASES)
     }
 
     private fun normalise(text: String) =
-        text.lowercase().replace(Regex("\\(.*?\\)|\\[.*?]"), "").replace(Regex("[^\\p{L}\\p{N}]"), "")
+        text.lowercase(Locale.ROOT).replace(Regex("\\(.*?\\)|\\[.*?]"), "").replace(Regex("[^\\p{L}\\p{N}]"), "")
 
-    private fun download(page: String, kind: Kind, target: File): Boolean {
-        val html = fetch(page)
+    private suspend fun download(html: String, kind: Kind, target: File): Boolean {
         val start = html.indexOf("\"${kind.key}\"")
         if (start < 0) return false
         val video =
@@ -147,12 +210,26 @@ internal object MotionArt {
         try {
             if (connection.contentLengthLong > MAX_BYTES) return false
             connection.inputStream.use { input ->
-                partial.outputStream().use { output -> input.copyTo(output) }
+                partial.outputStream().use { output ->
+                    val buffer = ByteArray(16 * 1024)
+                    var total = 0L
+                    while (true) {
+                        currentCoroutineContext().ensureActive()
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        total += count
+                        if (total > MAX_BYTES) throw IOException("Motion art exceeds cache limit")
+                        output.write(buffer, 0, count)
+                    }
+                }
             }
+            currentCoroutineContext().ensureActive()
+            if (partial.length() !in 1..MAX_BYTES || !partial.renameTo(target)) return false
+            return true
         } finally {
             connection.disconnect()
+            partial.delete()
         }
-        return partial.length() in 1..MAX_BYTES && partial.renameTo(target)
     }
 
     private fun trim(dir: File) {

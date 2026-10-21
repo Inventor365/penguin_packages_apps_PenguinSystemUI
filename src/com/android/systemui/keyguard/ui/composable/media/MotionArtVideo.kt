@@ -40,6 +40,7 @@ internal fun MotionArtVideo(
     file: File,
     modifier: Modifier = Modifier,
     crop: Boolean = false,
+    onError: () -> Unit = {},
     onRendering: () -> Unit = {},
 ) {
     key(file) {
@@ -50,7 +51,7 @@ internal fun MotionArtVideo(
                 TextureView(context).apply {
                     isOpaque = false
                     surfaceTextureListener =
-                        LoopingPlayer(this, file, crop) {
+                        LoopingPlayer(this, file, crop, onError) {
                             rendering = true
                             onRendering()
                         }
@@ -66,6 +67,7 @@ private class LoopingPlayer(
     private val view: TextureView,
     private val file: File,
     private val crop: Boolean,
+    private val onError: () -> Unit,
     private val onRendering: () -> Unit,
 ) : TextureView.SurfaceTextureListener {
     private var player: MediaPlayer? = null
@@ -84,7 +86,11 @@ private class LoopingPlayer(
                     if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) onRendering()
                     false
                 }
-                setOnErrorListener { _, _, _ -> true }
+                setOnErrorListener { _, what, extra ->
+                    Log.w("LockscreenMotionArt", "Playback failed for $file: $what/$extra")
+                    onError()
+                    true
+                }
                 setOnPreparedListener { it.start() }
                 if (crop) setOnVideoSizeChangedListener { _, width, height -> cropTo(width, height) }
                 try {
@@ -92,6 +98,7 @@ private class LoopingPlayer(
                     prepareAsync()
                 } catch (e: IOException) {
                     Log.w("LockscreenMotionArt", "Cannot play $file: $e")
+                    onError()
                 }
             }
     }
