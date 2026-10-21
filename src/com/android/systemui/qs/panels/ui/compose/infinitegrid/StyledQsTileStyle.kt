@@ -57,7 +57,11 @@ private class StyledQsTileStyle(
 
     @Composable
     override fun colors(uiState: TileUiState, iconOnly: Boolean, stock: TileColors): TileColors =
-        if (this.stock) stock else StyledTileColors.getColorForState(uiState, iconOnly)
+        when {
+            !this.stock -> StyledTileColors.getColorForState(uiState, iconOnly)
+            glass -> StyledTileColors.stockGlassColors(uiState, iconOnly, stock)
+            else -> stock
+        }
 
     @Composable
     override fun cornerRadius(uiState: TileUiState, stock: Dp): Dp =
@@ -105,6 +109,7 @@ private object StyledTileColors {
     private const val GlassSurfaceAlpha = 0.45f
     private const val GlassIconSurfaceAlpha = GlassSurfaceAlpha
     private const val ActiveTileAlpha = 1f
+    private val GlassGlyph = Color(0xFF1C1C1E)
 
     private val surfaceAlpha: Float
         @Composable @ReadOnlyComposable get() = if (isStockQsStyle) 1f else GlassSurfaceAlpha
@@ -206,6 +211,32 @@ private object StyledTileColors {
         )
     }
 
+    /**
+     * Liquid Glass on the stock layout: the stock tiles keep their shapes and surfaces, but the
+     * parts stock fills with the accent colour take Liquid Glass's two-tone look instead, white
+     * with a dark glyph, like its sliders.
+     */
+    @Composable
+    @ReadOnlyComposable
+    fun stockGlassColors(uiState: TileUiState, iconOnly: Boolean, stock: TileColors): TileColors =
+        when {
+            uiState.visualState != STATE_ACTIVE -> stock
+            uiState.handlesToggleClick && !iconOnly ->
+                stock.copy(
+                    iconBackground = Color.White,
+                    icon = GlassGlyph,
+                    circleAroundIcon = Color.White,
+                )
+            else ->
+                stock.copy(
+                    background = Color.White,
+                    iconBackground = Color.White,
+                    label = GlassGlyph,
+                    secondaryLabel = GlassGlyph.copy(alpha = 0.7f),
+                    icon = GlassGlyph,
+                )
+        }
+
     @Composable
     @ReadOnlyComposable
     fun getColorForState(uiState: TileUiState, iconOnly: Boolean): TileColors {
@@ -217,7 +248,7 @@ private object StyledTileColors {
                         iconBackground = Color.White,
                         label = Color.White,
                         secondaryLabel = Color.White,
-                        icon = Color(0xFF1C1C1E),
+                        icon = GlassGlyph,
                     )
                 } else if (uiState.handlesToggleClick && !iconOnly) {
                     activeDualTargetTileColors()
