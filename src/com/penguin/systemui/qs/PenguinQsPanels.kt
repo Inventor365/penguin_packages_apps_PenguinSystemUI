@@ -14,23 +14,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import com.android.compose.animation.scene.ContentScope
+import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.penguin.LocalQsPanels
 import com.android.systemui.penguin.QsEditMode
 import com.android.systemui.penguin.QsPanels
 import com.android.systemui.penguin.QsTileStyle
-import com.android.systemui.qs.shared.style.panelStyle
-import com.android.systemui.qs.shared.style.QsPanelStyle
-import com.android.systemui.qs.panels.ui.compose.toolbar.EditModeButton
-import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.qs.composefragment.ConnectivityFolderExpansion
 import com.android.systemui.qs.panels.ui.compose.StyledQsEditMode
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.styledQsTileStyle
+import com.android.systemui.qs.panels.ui.compose.toolbar.EditModeButton
+import com.android.systemui.qs.panels.ui.viewmodel.toolbar.ToolbarViewModel
 import com.android.systemui.qs.shared.style.LocalGlassBlurAllowed
 import com.android.systemui.qs.shared.style.LocalGlassBlurAlpha
+import com.android.systemui.qs.shared.style.LocalQsPanelStyle
 import com.android.systemui.qs.shared.style.PenguinQsStyle
+import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.qs.shared.style.QsPanelStyleRepository
-import com.android.systemui.qs.panels.ui.viewmodel.toolbar.ToolbarViewModel
+import com.android.systemui.qs.shared.style.panelStyle
 import com.android.systemui.qs.ui.composable.ControlCentreTop
+import com.android.systemui.qs.ui.composable.LocalPenguinQsArrival
 import com.android.systemui.qs.ui.composable.LocalQsHostTransition
 import com.android.systemui.qs.ui.composable.PenguinMediaExpansion
 import com.android.systemui.qs.ui.composable.StyledOverlayBody
@@ -39,7 +41,6 @@ import com.android.systemui.qs.ui.composable.StyledOverlayHost
 import com.android.systemui.qs.ui.composable.StyledQuickSettingsContent
 import com.android.systemui.qs.ui.composable.closeExpansions
 import com.android.systemui.qs.ui.composable.controlCentreTopShown
-import com.android.systemui.qs.ui.composable.LocalPenguinQsArrival
 import com.android.systemui.qs.ui.composable.controlCentreWide
 import com.android.systemui.qs.ui.composable.qsHostTransition
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
@@ -111,11 +112,16 @@ constructor(
 
     @Composable
     override fun ContentScope.OverlayHost(content: @Composable () -> Unit) {
-        val container = LocalQsPanels.current?.container
-        if (container == null) {
-            content()
-        } else {
-            StyledOverlayHost(container, shadeAnimationInteractor.isLaunchingActivity, content)
+        // The stock layout draws AOSP's own body, which doesn't provide the panel style itself;
+        // provide it here so its tiles know they are in the stock style.
+        val style = PenguinQsStyle.repository.style.collectAsState().value
+        CompositionLocalProvider(LocalQsPanelStyle provides style) {
+            val container = LocalQsPanels.current?.container
+            if (container == null) {
+                content()
+            } else {
+                StyledOverlayHost(container, shadeAnimationInteractor.isLaunchingActivity, content)
+            }
         }
     }
 
