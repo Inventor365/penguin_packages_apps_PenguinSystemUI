@@ -32,6 +32,7 @@ import com.android.systemui.qs.panels.ui.compose.PanelBand
 import com.android.systemui.qs.composefragment.ConnectivityFolder
 import com.android.systemui.qs.composefragment.MyUiGridGap
 import com.android.systemui.qs.composefragment.MyUiMediaCard
+import com.android.systemui.qs.shared.style.liquidGlassOn
 import com.android.systemui.qs.composefragment.PenguinMediaCard
 import com.android.systemui.qs.ui.composable.PenguinGridMargin
 import com.android.systemui.qs.ui.composable.PenguinQuickQuickSettings
@@ -180,6 +181,7 @@ fun ContentScope.StyledShadeHeader(
     visualOffsetProvider: Density.() -> Int,
 ) {
     val isDefaultStyle = viewModel.panelStyle.stockLayout
+    val stockGlassMedia = viewModel.panelStyle == QsPanelStyle.Stock && liquidGlassOn
     val isHarmonyStyle = viewModel.panelStyle == QsPanelStyle.Harmony
     val isColorOsStyle = viewModel.panelStyle == QsPanelStyle.ColorOs
     val isMyUiStyle =
@@ -440,16 +442,18 @@ fun ContentScope.StyledShadeHeader(
                 if (viewModel.isQsEnabled && (viewModel.showMedia || qqsShowsMedia)) {
                     Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
                         if (
-                            !isDefaultStyle &&
-                                (secureIntSetting(SETTING_QS_MEDIA_SPAN, 1) < 2 ||
-                                    secureIntSetting(SETTING_QS_MEDIA_STYLE, 0) != 0)
+                            stockGlassMedia ||
+                                (!isDefaultStyle &&
+                                    (secureIntSetting(SETTING_QS_MEDIA_SPAN, 1) < 2 ||
+                                        secureIntSetting(SETTING_QS_MEDIA_STYLE, 0) != 0))
                         ) {
                             PenguinMediaCard(
                                 viewModelFactory = viewModel.mediaViewModelFactory,
                                 behavior =
                                     ShadeSceneContentViewModel.qqsMediaUiBehavior,
                                 square =
-                                    secureIntSetting(SETTING_QS_MEDIA_SPAN, 1) < 2,
+                                    !isDefaultStyle && secureIntSetting(SETTING_QS_MEDIA_SPAN, 1) < 2,
+                                controlCentre = stockGlassMedia,
                             )
                         } else {
                             Media(

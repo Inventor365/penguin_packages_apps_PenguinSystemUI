@@ -1029,14 +1029,23 @@ private fun ContentScope.DefaultQuickSettingsContent(
             @Composable {
                 if (isAlwaysComposedContentVisible()) {
                     Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
-                        Media(
-                            viewModelFactory = viewModel.mediaViewModelFactory,
-                            presentationStyle = MediaPresentationStyle.Default,
-                            behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
-                            onDismissed = viewModel::onMediaSwipeToDismiss,
-                            mediaSquishiness = mediaSquishiness,
-                            location = Media.Location.QS,
-                        )
+                        if (viewModel.panelStyle == QsPanelStyle.Stock && liquidGlassOn) {
+                            PenguinMediaCard(
+                                viewModelFactory = viewModel.mediaViewModelFactory,
+                                behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
+                                square = false,
+                                controlCentre = true,
+                            )
+                        } else {
+                            Media(
+                                viewModelFactory = viewModel.mediaViewModelFactory,
+                                presentationStyle = MediaPresentationStyle.Default,
+                                behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
+                                onDismissed = viewModel::onMediaSwipeToDismiss,
+                                mediaSquishiness = mediaSquishiness,
+                                location = Media.Location.QS,
+                            )
+                        }
                     }
                 } else {
                     // Add an empty box when QS content is not visible to keep the same number of
