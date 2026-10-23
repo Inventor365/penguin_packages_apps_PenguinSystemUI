@@ -17,6 +17,8 @@
 package com.android.systemui.keyguard.ui.composable.media
 
 import android.content.Context
+import android.media.MediaCodecList
+import android.media.MediaFormat
 import android.util.Log
 import java.io.File
 import java.io.IOException
@@ -43,6 +45,11 @@ internal object MotionArt {
         TALL("motionDetailTall", 830, "-tall"),
     }
 
+    // Tablets fetch the iPad renditions (up to 2048 wide, HEVC only) instead of the phone ones.
+    private const val TABLET_MIN_WIDTH_DP = 600
+    private const val TABLET_TARGET_WIDTH = 2048
+    private const val TABLET_SUFFIX = "-tablet"
+
     private const val TAG = "LockscreenMotionArt"
     private const val USER_AGENT =
         "Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 (KHTML, like Gecko) " +
@@ -60,9 +67,11 @@ internal object MotionArt {
             lookupMutex.withLock {
                 if (normalise(artist).isBlank() || normalise(title).isBlank()) return@withLock null
                 val dir = File(context.createDeviceProtectedStorageContext().cacheDir, "motion_art")
+                val tablet = context.resources.configuration.smallestScreenWidthDp >= TABLET_MIN_WIDTH_DP
+                val suffix = kind.suffix + if (tablet) TABLET_SUFFIX else ""
                 val key = normalise(artist) + "\u0000" + normalise(title) + "\u0000" + kind
                 fun cached(id: String): File? =
-                    File(dir, id + kind.suffix + ".mp4").takeIf { it.isFile && it.length() > 0 }
+                    File(dir, id + suffix + ".mp4").takeIf { it.isFile && it.length() > 0 }
                         ?.also { it.setLastModified(System.currentTimeMillis()) }
                 albums[key]?.let { id ->
                     cached(id)?.let { return@withLock it }
@@ -84,8 +93,8 @@ internal object MotionArt {
                         try {
                             val html = fetch(page)
                             currentCoroutineContext().ensureActive()
-                            val target = File(dir, id + kind.suffix + ".mp4")
-                            if (download(html, kind, target)) {
+                            val target = File(dir, id + suffix + ".mp4")
+                            if (download(html, kind, target, tablet)) {
                                 albums[key] = id
                                 var parent = parents[id]
                                 while (parent != null) {
@@ -174,7 +183,7 @@ internal object MotionArt {
     private fun normalise(text: String) =
         text.lowercase(Locale.ROOT).replace(Regex("\\(.*?\\)|\\[.*?]"), "").replace(Regex("[^\\p{L}\\p{N}]"), "")
 
-    private suspend fun download(html: String, kind: Kind, target: File): Boolean {
+    private suspend fun download(html: String, kind: Kind, target: File, tablet: Boolean): Boolean {
         val start = html.indexOf("\"${kind.key}\"")
         if (start < 0) return false
         val video =
@@ -186,17 +195,33 @@ internal object MotionArt {
         val master = fetch(video).lines()
         var best: String? = null
         var bestDistance = Int.MAX_VALUE
+        var bestBandwidth = Long.MAX_VALUE
         for (i in master.indices) {
             val line = master[i]
-            if (!line.startsWith("#EXT-X-STREAM-INF") || !line.contains("avc1")) continue
+            if (!line.startsWith("#EXT-X-STREAM-INF")) continue
+            val hevc = tablet && line.contains("hvc1")
+            if (!line.contains("avc1") && !hevc) continue
             val width =
                 Regex("RESOLUTION=(\\d+)x").find(line)?.groupValues?.get(1)?.toInt() ?: continue
             val uri = master.getOrNull(i + 1)?.trim().orEmpty()
             if (uri.isEmpty() || uri.startsWith("#")) continue
-            val distance = abs(width - kind.targetWidth)
-            if (distance < bestDistance) {
+            if (tablet) {
+                val height =
+                    Regex("RESOLUTION=\\d+x(\\d+)").find(line)?.groupValues?.get(1)?.toInt()
+                        ?: continue
+                val mime = if (hevc) MediaFormat.MIMETYPE_VIDEO_HEVC else MediaFormat.MIMETYPE_VIDEO_AVC
+                if (!canDecode(mime, width, height)) continue
+            }
+            val distance = abs(width - if (tablet) TABLET_TARGET_WIDTH else kind.targetWidth)
+            // Several bitrates share a resolution; tablets take the smallest file of the closest size.
+            val bandwidth =
+                Regex("[,:]BANDWIDTH=(\\d+)").find(line)?.groupValues?.get(1)?.toLong()
+                    ?: Long.MAX_VALUE
+            if (distance < bestDistance ||
+                (tablet && distance == bestDistance && bandwidth < bestBandwidth)) {
                 best = URL(URL(video), uri).toString()
                 bestDistance = distance
+                bestBandwidth = bandwidth
             }
         }
         best ?: return false
@@ -231,6 +256,17 @@ internal object MotionArt {
             partial.delete()
         }
     }
+
+    private fun canDecode(mime: String, width: Int, height: Int): Boolean =
+        MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.any { info ->
+            !info.isEncoder && info.isHardwareAccelerated &&
+                info.supportedTypes.any { it.equals(mime, ignoreCase = true) } &&
+                try {
+                    info.getCapabilitiesForType(mime).videoCapabilities?.isSizeSupported(width, height) == true
+                } catch (_: IllegalArgumentException) {
+                    false
+                }
+        }
 
     private fun trim(dir: File) {
         val files = dir.listFiles { file -> file.name.endsWith(".mp4") } ?: return
