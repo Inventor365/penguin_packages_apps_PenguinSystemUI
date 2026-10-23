@@ -16,8 +16,17 @@
 
 package com.android.systemui.qs.ui.composable
 
+import androidx.compose.animation.core.Animatable
+import com.android.systemui.penguin.CosFeature
+import com.android.systemui.penguin.rememberCosFeature
+import com.android.systemui.qs.shared.style.LocalGlassBlurAlpha
 import com.android.systemui.qs.shared.style.panelStyle
 import androidx.compose.foundation.layout.Arrangement.spacedBy
+import com.android.systemui.qs.composefragment.ColorOsGap
+import com.android.systemui.qs.composefragment.ColorOsMediaFrame
+import com.android.systemui.qs.composefragment.ColorOsTileGrid
+import com.android.systemui.qs.composefragment.ColorOsTopRows
+import com.android.systemui.qs.composefragment.colorOsCardSpecs
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -165,6 +174,7 @@ fun ContentScope.StyledQuickSettingsContent(
                 MyUiQuickSettingsContent(viewModel, modifier, mediaSquishiness)
             QsPanelStyle.Harmony -> HarmonyQuickSettingsContent(viewModel, modifier)
             QsPanelStyle.OneUi -> OneUiQuickSettingsContent(viewModel, modifier)
+            QsPanelStyle.ColorOs -> ColorOsQuickSettingsContent(viewModel, modifier)
         }
     }
 }
@@ -349,6 +359,116 @@ private fun ContentScope.OneUiQuickSettingsContent(
 }
 
 private val OneUiSliderRowHeight = 72.dp
+
+@Composable
+private fun ContentScope.ColorOsQuickSettingsContent(
+    viewModel: QuickSettingsContainerViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val allTiles = viewModel.tileGridViewModel.tileViewModels
+    val cardSpecs = remember(allTiles) { colorOsCardSpecs(allTiles) }
+    val gridTiles = remember(allTiles, cardSpecs) { allTiles.filterNot { it.spec.spec in cardSpecs } }
+    var interactable by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { Elements.QuickSettingsContent.currentAlpha() }
+            .filterNotNull()
+            .collect { interactable = it >= .5f }
+    }
+
+    val own = qsHostTransition()
+    val host = LocalQsHostTransition.current ?: own
+    val transition =
+        QsHostTransition(idle = host.idle && own.idle, leaving = host.leaving || own.leaving)
+    val cosHide = rememberCosFeature(CosFeature.Shade)
+    val glassFade = remember { Animatable(1f) }
+    LaunchedEffect(cosHide && transition.leaving) {
+        glassFade.animateTo(
+            if (cosHide && transition.leaving) 0f else 1f,
+            spring(dampingRatio = 1f, stiffness = 3948f),
+        )
+    }
+    val outerGlassAlpha = LocalGlassBlurAlpha.current
+    CompositionLocalProvider(
+        LocalQsHostTransition provides transition,
+        LocalGlassBlurAlpha provides { outerGlassAlpha() * glassFade.value },
+    ) {
+        Column(
+            verticalArrangement = spacedBy(ColorOsGap),
+            modifier =
+                modifier
+                    .element(Elements.QuickSettingsContent)
+                    .padding(horizontal = dimensionResource(id = R.dimen.qs_horizontal_margin))
+                    .sysuiResTag("quick_settings_panel"),
+        ) {
+            ColorOsHeader(viewModel, interactable)
+            Box(Modifier.element(Elements.QuickSettingsTiles)) {
+                GridAnchor()
+                ColorOsTileGrid(gridTiles)
+            }
+            if (contentKey != Overlays.QuickSettingsShade) {
+                val editButtonViewModel =
+                    rememberViewModel(traceName = "ColorOsQuickSettings-editButton") {
+                        viewModel.editModeButtonViewModelFactory.create()
+                    }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    EditModeButton(viewModel = editButtonViewModel, isVisible = interactable)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ContentScope.ColorOsHeader(
+    viewModel: QuickSettingsContainerViewModel,
+    interactable: Boolean = true,
+    modifier: Modifier = Modifier,
+) {
+    val showMedia =
+        viewModel.showMedia && viewModel.hasMediaCards && isAlwaysComposedContentVisible()
+    ColorOsTopRows(
+        tiles = viewModel.tileGridViewModel.tileViewModels,
+        media =
+            if (showMedia) {
+                {
+                    Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
+                        ColorOsMediaFrame {
+                            PenguinMediaCard(
+                                viewModelFactory = viewModel.mediaViewModelFactory,
+                                behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
+                                square = true,
+                            )
+                        }
+                    }
+                }
+            } else {
+                null
+            },
+        sliders = { width, height ->
+            Element(key = Elements.BrightnessSlider, modifier = Modifier) {
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth().thenIf(!interactable) {
+                            Modifier.gesturesDisabled()
+                        },
+                    horizontalArrangement = spacedBy(ColorOsGap),
+                ) {
+                    BrightnessLayout(
+                        enable = interactable,
+                        verticalWidth = width,
+                        sliderHeight = height,
+                    )
+                    VolumeLayout(
+                        enable = interactable,
+                        verticalWidth = width,
+                        sliderHeight = height,
+                    )
+                }
+            }
+        },
+        modifier = modifier.element(Elements.ConnectivityFolder),
+    )
+}
 
 @Composable
 fun ContentScope.HarmonyHeader(

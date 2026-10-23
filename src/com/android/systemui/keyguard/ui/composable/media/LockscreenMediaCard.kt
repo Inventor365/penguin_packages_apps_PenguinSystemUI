@@ -16,6 +16,9 @@
 
 package com.android.systemui.keyguard.ui.composable.media
 
+import com.android.systemui.qs.composefragment.rememberCosMediaColor
+import com.android.systemui.qs.composefragment.LocalCosSeekColor
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -39,6 +42,8 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.android.systemui.qs.composefragment.cosSeekGlow
+import com.android.systemui.qs.composefragment.cosStatusGlow
 import androidx.compose.material3.Icon as M3Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -138,6 +143,12 @@ fun LockscreenMediaCard(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MediaCard(card: MediaCardViewModel, isSelected: Boolean) {
+    val seekColor = rememberCosMediaColor((card.background as? CommonIcon.Loaded)?.drawable)
+    CompositionLocalProvider(LocalCosSeekColor provides seekColor) { MediaCardBody(card, isSelected) }
+}
+
+@Composable
+private fun MediaCardBody(card: MediaCardViewModel, isSelected: Boolean) {
     val density = LocalDensity.current
     val fraction = { LockscreenMediaExpansion.fraction }
     val f = fraction()
@@ -169,6 +180,7 @@ private fun MediaCard(card: MediaCardViewModel, isSelected: Boolean) {
                     lerpColor(if (glass) LiquidGlassSurface else CompactGlass, SmokyGlass, f)
                 )
                 .glassRim(RoundedCornerShape(CardCorner))
+                .cosStatusGlow(card.title to card.subtitle, CardCorner)
         )
         Column(
             modifier =
@@ -262,6 +274,7 @@ private fun SeekBar(navigation: MediaNavigationViewModel) {
                 Modifier.weight(1f)
                     .padding(horizontal = 10.dp)
                     .height(24.dp)
+                    .cosSeekGlow(progress, showing.isSquiggly, showing.isScrubbing, LocalCosSeekColor.current)
                     .semantics { contentDescription = showing.contentDescription }
                     .then(
                         if (showing.onScrubChange != null) {

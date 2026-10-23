@@ -10,4 +10,8 @@
 # Looked up by name when the COS library is linked
 -keep class com.penguin.cos.systemui.CosBrightnessSlider { public static *; }
 -keep class com.penguin.cos.systemui.CosSpring { *; }
+-keep class com.penguin.cos.systemui.CosRim { public static *; }
+-keep class com.penguin.cos.systemui.CosMediaLight { public static *; }
+-keep class com.penguin.cos.systemui.CosStrokeGlow { public *; }
+-keep class com.penguin.cos.systemui.CosConicLight { public *; }
 -dontwarn com.penguin.cos.systemui.**

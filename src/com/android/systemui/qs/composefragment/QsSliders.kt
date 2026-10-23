@@ -5,6 +5,10 @@
 
 package com.android.systemui.qs.composefragment
 
+import com.android.systemui.qs.shared.style.QsPanelStyle
+
+import com.android.systemui.qs.shared.style.LocalQsPanelStyle
+
 import android.animation.Animator
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
@@ -351,6 +355,9 @@ fun VolumeLayout(
         Unit
     }
 
+    val cosVolume =
+        LocalQsPanelStyle.current == QsPanelStyle.ColorOs || rememberCosExperience()
+
     val toggleMute = {
         audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_TOGGLE_MUTE, 0)
         updateVolumeState()
@@ -382,6 +389,25 @@ fun VolumeLayout(
                     housingHeight = sliderHeight,
                     interactive = interactive,
                 )
+            } else if (cosVolume) {
+                CosGlassSlider(
+                    width = verticalWidth ?: 75.dp,
+                    height = sliderHeight,
+                    fraction = sliderValue,
+                    icon = painterResource(
+                        if (isMuted || currentVolume == 0) R.drawable.ic_volume_off
+                        else R.drawable.ic_volume_media
+                    ),
+                    iconTint = CosVolumeTint,
+                ) {
+                    Box(
+                        Modifier.fillMaxSize().thenIf(interactive) {
+                            Modifier.sliderGestures(
+                                scope, onValueChanged, onValueChangeFinished, toggleMute,
+                            )
+                        }
+                    )
+                }
             } else {
                 VerticalSlider(
                     scope = scope,
@@ -520,6 +546,7 @@ fun BrightnessLayout(
     }
 
     val cosExperience = rememberCosExperience()
+    val cosStyle = LocalQsPanelStyle.current == QsPanelStyle.ColorOs
     val commonModifier =
         Modifier.systemGestureExclusionInShade(enabled = { enable })
 
@@ -545,16 +572,39 @@ fun BrightnessLayout(
                     housingHeight = sliderHeight,
                     interactive = interactive,
                 )
-            } else if (cosExperience) {
-                AndroidView(
-                    factory = { ctx ->
-                        CosHooks.createBrightnessSlider(ctx) { fraction, finished ->
-                            if (finished) onValueChangeFinished(fraction) else onValueChanged(fraction)
-                        }
-                    },
-                    update = { view -> CosHooks.setBrightnessFraction(view, sliderValue) },
-                    modifier = Modifier.size(width = verticalWidth ?: 75.dp, height = sliderHeight),
-                )
+            } else if (cosExperience || cosStyle) {
+                CosGlassSlider(
+                    width = verticalWidth ?: 75.dp,
+                    height = sliderHeight,
+                    fraction = sliderValue,
+                    icon = painterResource(
+                        if (isAuto) R.drawable.ic_qs_brightness_auto_on_new
+                        else R.drawable.ic_qs_brightness_auto_off_new
+                    ),
+                    iconTint = if (isAuto) CosAutoBrightnessTint else null,
+                ) {
+                    if (cosExperience) {
+                        AndroidView(
+                            factory = { ctx ->
+                                CosHooks.createBrightnessSlider(ctx) { fraction, finished ->
+                                    if (finished) onValueChangeFinished(fraction)
+                                    else onValueChanged(fraction)
+                                }
+                            },
+                            update = { view -> CosHooks.setBrightnessFraction(view, sliderValue) },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        Box(
+                            Modifier.fillMaxSize().thenIf(interactive) {
+                                Modifier.sliderGestures(
+                                    scope, onValueChanged, onValueChangeFinished,
+                                    toggleBrightnessMode,
+                                )
+                            }
+                        )
+                    }
+                }
             } else {
                 VerticalSlider(
                     scope = scope,

@@ -156,6 +156,10 @@ constructor(
 
     @Composable override fun tileStyle(): QsTileStyle? = styledQsTileStyle()
 
+    @Composable
+    override fun cosPanel(viewModel: QuickSettingsContainerViewModel): Boolean =
+        viewModel.panelStyle == QsPanelStyle.ColorOs
+
     override fun onScrimClicked(): Boolean {
         val open = ConnectivityFolderExpansion.expanded || PenguinMediaExpansion.expanded
         if (open) closeExpansions()

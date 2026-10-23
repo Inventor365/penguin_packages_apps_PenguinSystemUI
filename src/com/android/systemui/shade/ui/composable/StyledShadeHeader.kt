@@ -22,6 +22,7 @@ import com.android.systemui.qs.shared.style.onConnectivityFolderExpandRequested
 import com.android.systemui.qs.composefragment.BrightnessLayout
 import com.android.systemui.qs.ui.composable.qsHostTransition
 import com.android.systemui.qs.ui.composable.LocalQsHostTransition
+import com.android.systemui.qs.ui.composable.ColorOsHeader
 import com.android.systemui.qs.ui.composable.HarmonyHeader
 import com.android.systemui.qs.ui.composable.penguinPanel
 import com.android.systemui.qs.panels.ui.compose.MEDIA_SPEC
@@ -180,7 +181,9 @@ fun ContentScope.StyledShadeHeader(
 ) {
     val isDefaultStyle = viewModel.panelStyle == QsPanelStyle.Default
     val isHarmonyStyle = viewModel.panelStyle == QsPanelStyle.Harmony
-    val isMyUiStyle = viewModel.panelStyle == QsPanelStyle.MyUi || isHarmonyStyle
+    val isColorOsStyle = viewModel.panelStyle == QsPanelStyle.ColorOs
+    val isMyUiStyle =
+        viewModel.panelStyle == QsPanelStyle.MyUi || isHarmonyStyle || isColorOsStyle
     val qqsShowsMedia =
         !isDefaultStyle &&
             viewModel.isQsEnabled &&
@@ -485,6 +488,8 @@ fun ContentScope.StyledShadeHeader(
         myUiHeader = {
             if (isHarmonyStyle) {
                 HarmonyHeader(viewModel.qsContainerViewModel)
+            } else if (isColorOsStyle) {
+                ColorOsHeader(viewModel.qsContainerViewModel)
             } else {
                 MyUiHeaderRow(
                     tiles =
@@ -493,7 +498,7 @@ fun ContentScope.StyledShadeHeader(
                 )
             }
         },
-        showMedia = qqsShowsMedia && !isHarmonyStyle,
+        showMedia = qqsShowsMedia && !isHarmonyStyle && !isColorOsStyle,
         penguinQqs = {
             var penguinListening by remember { mutableStateOf(false) }
             LifecycleStartEffect(Unit) {

@@ -16,6 +16,7 @@
 
 package com.android.systemui.statusbar.quickactions.dynamicisland.media.ui.compose
 
+import com.android.systemui.qs.composefragment.cosSeekGlow
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
@@ -266,7 +267,17 @@ private fun MediaProgressSection(
             color = LocalContentColor.current.copy(alpha = 0.60f),
         )
 
-        Box(modifier = Modifier.weight(1f).height(28.dp)) {
+        Box(
+            modifier =
+                Modifier.weight(1f)
+                    .height(28.dp)
+                    .cosSeekGlow(
+                        if (durationMs > 0) displayedPositionMs.toFloat() / durationMs else 0f,
+                        isPlaying,
+                        isScrubbing,
+                        accentArgb,
+                    )
+        ) {
             var boxWidthPx by remember { mutableStateOf(0) }
 
             fun applyFraction(fraction: Float) {

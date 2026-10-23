@@ -11,6 +11,7 @@ import androidx.compose.animation.core.spring
 import com.android.compose.animation.scene.TransitionBuilder
 import com.android.systemui.qs.ui.composable.QuickSettingsShade
 import com.android.systemui.shade.ui.composable.OverlayShade
+import androidx.compose.ui.unit.dp
 import kotlin.math.PI
 
 fun cosSpring(response: Double, durationScale: Double): SpringSpec<Float> =
@@ -21,11 +22,10 @@ fun cosSpring(response: Double, durationScale: Double): SpringSpec<Float> =
     )
 
 fun TransitionBuilder.cosToQuickSettingsShadeTransition(durationScale: Double = 1.0) {
-    spec = cosSpring(0.2, durationScale)
+    spec = cosSpring(COS_PANEL_RESPONSE, durationScale)
 
-    fractionRange(end = .6f) { fade(QuickSettingsShade.Elements.Panel) }
-    scaleDraw(QuickSettingsShade.Elements.Panel, scaleX = 0.8f, scaleY = 0.8f)
-    fractionRange(end = .5f) { fade(OverlayShade.Elements.Scrim) }
+    fractionRange(end = .86f) { translate(QuickSettingsShade.Elements.Panel, y = -CosPanelDrop) }
+    fractionRange(end = .33f) { fade(OverlayShade.Elements.Scrim) }
     fractionRange(start = .5f) {
         fade(QuickSettingsShade.Elements.StatusBar)
         fade(QuickSettingsShade.Elements.Header)
@@ -33,13 +33,15 @@ fun TransitionBuilder.cosToQuickSettingsShadeTransition(durationScale: Double = 
 }
 
 fun TransitionBuilder.cosFromQuickSettingsShadeTransition(durationScale: Double = 1.0) {
-    spec = cosSpring(0.3, durationScale)
+    spec = cosSpring(COS_PANEL_RESPONSE, durationScale)
 
-    fractionRange(end = .6f) { fade(QuickSettingsShade.Elements.Panel) }
-    scaleDraw(QuickSettingsShade.Elements.Panel, scaleX = 0.8f, scaleY = 0.8f)
+    translate(QuickSettingsShade.Elements.Panel, y = -CosPanelDrop)
     fractionRange(end = .5f) {
         fade(QuickSettingsShade.Elements.StatusBar)
         fade(QuickSettingsShade.Elements.Header)
     }
-    fade(OverlayShade.Elements.Scrim)
+    fractionRange(start = .67f) { fade(OverlayShade.Elements.Scrim) }
 }
+
+private const val COS_PANEL_RESPONSE = 0.314
+private val CosPanelDrop = 38.dp

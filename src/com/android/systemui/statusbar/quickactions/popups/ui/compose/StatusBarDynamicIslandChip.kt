@@ -33,6 +33,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
+import com.android.systemui.qs.composefragment.cosStatusGlow
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -202,6 +203,7 @@ fun StatusBarDynamicIslandChip(
                 }
                 .clip(chipShape)
                 .background(Color.Black)
+                .cosStatusGlow(viewModel.statusGlowKey(), IslandGlowCorner, capsule = true)
                 .border(width = 1.dp, color = chipOutline, shape = chipShape)
                 .combinedClickable(
                     interactionSource = interactionSource,
@@ -486,6 +488,15 @@ private fun UtilityStatusIslandChip(
         if (!hasBalancedSegments) Spacer(modifier = Modifier.width(10.dp * widthScale))
     }
 }
+
+private val IslandGlowCorner = 100.dp
+
+private fun PopupChipModel.Shown.statusGlowKey(): Any =
+    when (val content = popupContent) {
+        is PopupContentModel.Media -> chipId to content.model.songName?.toString()
+        is PopupContentModel.SystemEvent -> chipId to (content.kind to content.title)
+        else -> chipId to content::class
+    }
 
 @Composable
 private fun ChargingChipGlyph(pulse: Boolean, modifier: Modifier = Modifier) {

@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -32,6 +34,8 @@ import com.android.compose.animation.rememberExpandableController
 import com.android.compose.animation.scene.ContentScope
 import com.android.systemui.animation.Expandable
 import com.android.systemui.lifecycle.rememberViewModel
+import com.android.systemui.qs.composefragment.cosGlass
+import com.android.systemui.qs.composefragment.cosHeaderHide
 import com.android.systemui.qs.panels.ui.viewmodel.toolbar.ToolbarViewModel
 import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.qs.shared.style.glassBlurRegion
@@ -46,11 +50,13 @@ private val ButtonSize = 44.dp
 
 @Composable
 fun controlCentreTopShown(viewModel: QuickSettingsContainerViewModel): Boolean =
-    viewModel.panelStyle == QsPanelStyle.Penguin && liquidGlassEnabled()
+    viewModel.panelStyle == QsPanelStyle.ColorOs ||
+        (viewModel.panelStyle == QsPanelStyle.Penguin && liquidGlassEnabled())
 
 @Composable
 fun controlCentreWide(viewModel: QuickSettingsContainerViewModel): Boolean =
-    controlCentreTopShown(viewModel) && wideControlCentre()
+    viewModel.panelStyle == QsPanelStyle.Penguin && controlCentreTopShown(viewModel) &&
+        wideControlCentre()
 
 @Composable
 fun ContentScope.ControlCentreTop(
@@ -61,7 +67,8 @@ fun ContentScope.ControlCentreTop(
         rememberViewModel("ControlCentreTop") {
             toolbarViewModel.editModeButtonViewModelFactory.create()
         }
-    if (wideControlCentre()) {
+    val colorOs = viewModel.panelStyle == QsPanelStyle.ColorOs
+    if (!colorOs && wideControlCentre()) {
         ShadeStatusRow(
             viewModel.shadeHeaderViewModel,
             Modifier.fillMaxWidth()
@@ -72,8 +79,10 @@ fun ContentScope.ControlCentreTop(
         )
         return
     }
+    val leaving = LocalQsHostTransition.current?.leaving == true || qsHostTransition().leaving
     Column(
         Modifier.fillMaxWidth()
+            .cosHeaderHide(leaving)
             .padding(horizontal = PenguinGridMargin)
             .padding(top = 12.dp, bottom = 20.dp)
     ) {
@@ -82,9 +91,16 @@ fun ContentScope.ControlCentreTop(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            GlassButton(Icons.Rounded.Add) { editButton.onButtonClick() }
-            GlassButton(Icons.Rounded.PowerSettingsNew) {
-                toolbarViewModel.powerButtonViewModel.onClick(it)
+            if (colorOs) {
+                GlassButton(Icons.Rounded.Edit, cos = true) { editButton.onButtonClick() }
+                GlassButton(Icons.Rounded.Settings, cos = true) {
+                    toolbarViewModel.settingsButtonViewModel?.onClick?.invoke(it)
+                }
+            } else {
+                GlassButton(Icons.Rounded.Add) { editButton.onButtonClick() }
+                GlassButton(Icons.Rounded.PowerSettingsNew) {
+                    toolbarViewModel.powerButtonViewModel.onClick(it)
+                }
             }
         }
         Spacer(Modifier.height(20.dp))
@@ -93,11 +109,13 @@ fun ContentScope.ControlCentreTop(
 }
 
 @Composable
-private fun GlassButton(icon: ImageVector, onClick: (Expandable) -> Unit) {
+private fun GlassButton(icon: ImageVector, cos: Boolean = false, onClick: (Expandable) -> Unit) {
     Box(
         Modifier.size(ButtonSize)
-            .glassBlurRegion(CircleShape)
-            .liquidGlassRim(CircleShape)
+            .then(
+                if (cos) Modifier.cosGlass(CircleShape)
+                else Modifier.glassBlurRegion(CircleShape).liquidGlassRim(CircleShape)
+            )
             .glassPress()
     ) {
         Expandable(
