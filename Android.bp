@@ -41,21 +41,8 @@ android_library {
     ],
 }
 
-soong_config_module_type {
-    name: "penguin_cos_android_app",
-    module_type: "android_app",
-    config_namespace: "penguin_cos",
-    bool_variables: ["private"],
-    properties: ["static_libs"],
-}
-
-penguin_cos_android_app {
+android_app {
     name: "PenguinSystemUI",
-    soong_config_variables: {
-        private: {
-            static_libs: ["//packages/apps/CosExperience:CosSystemUI"],
-        },
-    },
     defaults: [
         "platform_app_defaults",
         "SystemUI_optimized_defaults",

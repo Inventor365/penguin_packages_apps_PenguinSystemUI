@@ -52,37 +52,13 @@ import com.android.systemui.penguin.LockscreenClockFace
 import com.android.systemui.qs.composefragment.CosHooks
 import com.android.systemui.shared.clocks.ClockRegistry
 import com.android.systemui.shared.clocks.DEFAULT_CLOCK_ID
-import java.io.File
+import com.android.systemui.shared.clocks.FluidDigits
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
-
-object FluidClockFont {
-    const val PATH = "/system_ext/etc/cos/CosDigitFlex.ttf"
-    const val WEIGHT = 450
-
-    private val base: Typeface? by lazy {
-        runCatching { Typeface.Builder(File(PATH)).build() }.getOrNull()
-    }
-    private val cache = HashMap<Int, Typeface>()
-
-    val available: Boolean
-        get() = base != null
-
-    fun at(height: Int): Typeface =
-        cache.getOrPut(height) {
-            val paint = Paint().apply { typeface = base }
-            paint.fontVariationSettings = "'wght' $WEIGHT, 'HGHT' $height"
-            paint.typeface
-        }
-
-    fun heightEm(height: Float): Float = 0.742f + 0.003456f * height
-
-    const val CAP_EM = 0.672f
-}
 
 data class FluidClockPose(val left: Float, val top: Float, val textSize: Float, val height: Float) {
     fun lerp(to: FluidClockPose, f: Float) =
@@ -138,10 +114,10 @@ constructor(
     }
 
     override val cosUnlock: Boolean
-        get() = settingOn && CosHooks.available
+        get() = settingOn
 
     override val isEnabled: Boolean
-        get() = cosUnlock && defaultFace && customStyle == 0 && FluidClockFont.available
+        get() = cosUnlock && defaultFace && customStyle == 0
 
     @Composable
     override fun Placeholder(large: Boolean, modifier: Modifier) {
@@ -199,10 +175,8 @@ constructor(
             val home = landing() ?: homePose(size.width, size.height, time, digitPaint, density)
             val pose = rest.lerp(home, FOLLOW_HAND * p)
             val h = pose.height.roundToInt().coerceIn(1, 1000)
-            digitPaint.typeface = FluidClockFont.at(h)
-            digitPaint.textSize = pose.textSize
-            val width = digitPaint.measureText(time)
-            val bottom = pose.top + pose.textSize * FluidClockFont.heightEm(h.toFloat())
+            val width = FluidDigits.width(time, pose.textSize)
+            val bottom = pose.top + pose.textSize * FluidDigits.heightEm(pose.height)
             digitPaint.shader =
                 LinearGradient(0f, pose.top, 0f, bottom, WHITE, tint, Shader.TileMode.CLAMP)
             digitPaint.alpha = (255 * a).roundToInt()
@@ -227,7 +201,7 @@ constructor(
                     pose.top - with(density) { 10.dp.toPx() },
                     datePaint,
                 )
-                native.drawText(time, pose.left, pose.top + FluidClockFont.CAP_EM * pose.textSize, digitPaint)
+                FluidDigits.draw(native, time, pose.left, pose.top, pose.textSize, pose.height, digitPaint)
             }
         }
     }
@@ -243,7 +217,7 @@ constructor(
     }
 
     private fun smallHeight(density: Density): Float =
-        with(density) { 14.sp.toPx() + 10.dp.toPx() + SMALL_SIZE.toPx() * FluidClockFont.heightEm(SMALL_HEIGHT) + 12.dp.toPx() }
+        with(density) { 14.sp.toPx() + 10.dp.toPx() + SMALL_SIZE.toPx() * FluidDigits.heightEm(SMALL_HEIGHT) + 12.dp.toPx() }
 
     private fun restPose(
         region: ComposeRect,
@@ -255,7 +229,7 @@ constructor(
         with(density) {
             val dateRow = (if (large) 17.sp else 14.sp).toPx() + 10.dp.toPx()
             if (large) {
-                val size = minOf(LARGE_SIZE.toPx(), region.width * 0.84f / DIGITS_EM)
+                val size = minOf(LARGE_SIZE.toPx(), region.width * 0.84f / FluidDigits.width(time, 1f))
                 val inset = LARGE_INSET.toPx()
                 val room = region.height - inset - dateRow - 24.dp.toPx()
                 val height = ((room / size - 0.742f) / 0.003456f).coerceIn(SMALL_HEIGHT, LARGE_HEIGHT)
@@ -271,8 +245,8 @@ constructor(
         if (!state.visibleOnScreen || state.boundsOnScreen.isEmpty) return null
         val digits = state.boundsOnScreen
         val height = digits.height().toFloat()
-        val size = digits.width() / DIGITS_EM
-        val fontHeight = ((height / size - 0.742f) / 0.003456f).coerceIn(1f, 1000f)
+        val size = digits.width() / FluidDigits.width("00:00", 1f)
+        val fontHeight = FluidDigits.stretchFor(height, size).coerceIn(1f, 1000f)
         return FluidClockPose(digits.left - screenOffset.x, digits.top - screenOffset.y, size, fontHeight)
     }
 
@@ -284,9 +258,7 @@ constructor(
         }
 
     private fun centred(region: ComposeRect, time: String, size: Float, height: Float, paint: Paint): Float {
-        paint.typeface = FluidClockFont.at(height.roundToInt().coerceIn(1, 1000))
-        paint.textSize = size
-        return region.left + (region.width - paint.measureText(time)) / 2f
+        return region.left + (region.width - FluidDigits.width(time, size)) / 2f
     }
 
     private fun wallpaperTint(context: Context): Int {
@@ -312,7 +284,6 @@ constructor(
         const val LARGE_HEIGHT = 680f
         const val SMALL_HEIGHT = 50f
         const val HOME_HEIGHT = 330f
-        const val DIGITS_EM = 3.066f
         const val FOLLOW_HAND = 0.5f
         const val WHITE = 0xFFFFFFFF.toInt()
         const val LAVENDER = 0xFFD9CCFF.toInt()

@@ -583,27 +583,14 @@ fun BrightnessLayout(
                     ),
                     iconTint = if (isAuto) CosAutoBrightnessTint else null,
                 ) {
-                    if (cosExperience) {
-                        AndroidView(
-                            factory = { ctx ->
-                                CosHooks.createBrightnessSlider(ctx) { fraction, finished ->
-                                    if (finished) onValueChangeFinished(fraction)
-                                    else onValueChanged(fraction)
-                                }
-                            },
-                            update = { view -> CosHooks.setBrightnessFraction(view, sliderValue) },
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    } else {
-                        Box(
-                            Modifier.fillMaxSize().thenIf(interactive) {
-                                Modifier.sliderGestures(
-                                    scope, onValueChanged, onValueChangeFinished,
-                                    toggleBrightnessMode,
-                                )
-                            }
-                        )
-                    }
+                    Box(
+                        Modifier.fillMaxSize().thenIf(interactive) {
+                            Modifier.sliderGestures(
+                                scope, onValueChanged, onValueChangeFinished,
+                                toggleBrightnessMode,
+                            )
+                        }
+                    )
                 }
             } else {
                 VerticalSlider(

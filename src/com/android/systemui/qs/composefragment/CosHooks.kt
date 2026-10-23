@@ -13,7 +13,6 @@ import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.view.View
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
@@ -22,150 +21,47 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.dynamicanimation.animation.FloatValueHolder
+import androidx.dynamicanimation.animation.SpringAnimation
+import androidx.dynamicanimation.animation.SpringForce
 import com.android.systemui.qs.shared.style.GlassBackdrop
-import java.lang.reflect.Constructor
-import java.lang.reflect.Method
-import java.util.function.BiConsumer
-import java.util.function.Consumer
+import com.penguin.systemui.light.CardLight
+import com.penguin.systemui.light.EdgeSweep
+import com.penguin.systemui.light.GlassRim
+import com.penguin.systemui.light.SeekLight
+import kotlin.math.PI
+import kotlin.math.pow
 
 object CosHooks {
     const val SETTING = "penguin_cos_experience"
 
-    private val slider: Class<*>? by lazy {
-        runCatching { Class.forName("com.penguin.cos.systemui.CosBrightnessSlider") }.getOrNull()
-    }
-    private val create: Method? by lazy {
-        slider?.getMethod("create", Context::class.java, BiConsumer::class.java)
-    }
-    private val setFraction: Method? by lazy {
-        slider?.getMethod("setFraction", View::class.java, Float::class.javaPrimitiveType)
+    @Suppress("UNUSED_PARAMETER")
+    fun createMediaLight(context: Context): Drawable = CardLight()
+
+    fun setMediaLightCorner(light: Drawable, radius: Float) =
+        (light as CardLight).setCornerRadius(radius)
+
+    fun applyMediaLight(light: Drawable, color: Int, night: Boolean) =
+        (light as CardLight).setColor(color, night)
+
+    fun applyMediaLightSpread(light: Drawable, x: Float, y: Float) =
+        (light as CardLight).playRipple(x, y)
+
+    fun clearMediaLight(light: Drawable) = (light as CardLight).clear()
+
+    class StrokeGlow internal constructor(private val sweep: EdgeSweep) {
+        fun setStartAngle(angle: Float) = sweep.setStartAngle(angle)
+
+        fun setProgress(progress: Float) = sweep.setProgress(progress)
+
+        fun draw(canvas: Canvas, width: Int, height: Int, cornerRadius: Float, weight: Float) =
+            sweep.draw(canvas, width, height, cornerRadius, capsule = weight < 2f)
     }
 
-    private val spring: Class<*>? by lazy {
-        runCatching { Class.forName("com.penguin.cos.systemui.CosSpring") }.getOrNull()
-    }
-    private val springNew: Constructor<*>? by lazy {
-        spring?.getConstructor(Float::class.javaPrimitiveType, Consumer::class.java)
-    }
-    private val springTo: Method? by lazy {
-        spring?.getMethod("animateTo", Float::class.javaPrimitiveType,
-            Float::class.javaPrimitiveType, Float::class.javaPrimitiveType)
-    }
-    private val springSnap: Method? by lazy {
-        spring?.getMethod("snapTo", Float::class.javaPrimitiveType)
-    }
+    fun newStrokeGlow(): StrokeGlow? = runCatching { StrokeGlow(EdgeSweep()) }.getOrNull()
 
-    private val rim: Class<*>? by lazy {
-        runCatching { Class.forName("com.penguin.cos.systemui.CosRim") }.getOrNull()
-    }
-    private val rimCreate: Method? by lazy { rim?.getMethod("create") }
-    private val rimUpdate: Method? by lazy {
-        val f = Float::class.javaPrimitiveType
-        val b = Boolean::class.javaPrimitiveType
-        rim?.getMethod("update", RuntimeShader::class.java, f, f, f, b, b)
-    }
-
-    private val mediaLight: Class<*>? by lazy {
-        runCatching { Class.forName("com.penguin.cos.systemui.CosMediaLight") }.getOrNull()
-    }
-    private fun mediaLightMethod(name: String, vararg types: Class<*>?): Method? =
-        runCatching { mediaLight?.getMethod(name, Drawable::class.java, *types) }.getOrNull()
-    private val mediaLightCreate: Method? by lazy {
-        runCatching { mediaLight?.getMethod("create", Context::class.java) }.getOrNull()
-    }
-    private val mediaLightCorner by lazy {
-        mediaLightMethod("setCorner", Float::class.javaPrimitiveType)
-    }
-    private val mediaLightOutline by lazy {
-        mediaLightMethod(
-            "applyShadowAndOutline",
-            Int::class.javaPrimitiveType,
-            Boolean::class.javaPrimitiveType,
-        )
-    }
-    private val mediaLightSpread by lazy {
-        mediaLightMethod("applySpread", Float::class.javaPrimitiveType, Float::class.javaPrimitiveType)
-    }
-    private val mediaLightClear by lazy { mediaLightMethod("clear") }
-
-    fun createMediaLight(context: Context): Drawable? =
-        mediaLightCreate?.invoke(null, context) as Drawable?
-
-    fun setMediaLightCorner(light: Drawable, radius: Float) {
-        mediaLightCorner?.invoke(null, light, radius)
-    }
-
-    fun applyMediaLight(light: Drawable, color: Int, night: Boolean) {
-        mediaLightOutline?.invoke(null, light, color, night)
-    }
-
-    fun applyMediaLightSpread(light: Drawable, x: Float, y: Float) {
-        mediaLightSpread?.invoke(null, light, x, y)
-    }
-
-    fun clearMediaLight(light: Drawable) {
-        mediaLightClear?.invoke(null, light)
-    }
-
-    private val strokeGlow: Class<*>? by lazy {
-        runCatching { Class.forName("com.penguin.cos.systemui.CosStrokeGlow") }.getOrNull()
-    }
-    private val strokeGlowAngle: Method? by lazy {
-        runCatching { strokeGlow?.getMethod("setStartAngle", Float::class.javaPrimitiveType) }
-            .getOrNull()
-    }
-    private val strokeGlowProgress: Method? by lazy {
-        runCatching { strokeGlow?.getMethod("setProgress", Float::class.javaPrimitiveType) }
-            .getOrNull()
-    }
-    private val strokeGlowDraw: Method? by lazy {
-        runCatching {
-                val i = Int::class.javaPrimitiveType
-                val f = Float::class.javaPrimitiveType
-                strokeGlow?.getMethod("draw", Canvas::class.java, i, i, f, f)
-            }
-            .getOrNull()
-    }
-
-    class StrokeGlow internal constructor(private val handle: Any) {
-        fun setStartAngle(angle: Float) {
-            strokeGlowAngle?.invoke(handle, angle)
-        }
-
-        fun setProgress(progress: Float) {
-            strokeGlowProgress?.invoke(handle, progress)
-        }
-
-        fun draw(canvas: Canvas, width: Int, height: Int, cornerRadius: Float, weight: Float) {
-            strokeGlowDraw?.invoke(handle, canvas, width, height, cornerRadius, weight)
-        }
-    }
-
-    fun newStrokeGlow(): StrokeGlow? =
-        runCatching { strokeGlow?.getConstructor()?.newInstance() }.getOrNull()?.let {
-            StrokeGlow(it)
-        }
-
-    private val conicLight: Class<*>? by lazy {
-        runCatching { Class.forName("com.penguin.cos.systemui.CosConicLight") }.getOrNull()
-    }
-    private fun conicMethod(name: String, vararg types: Class<*>?): Method? =
-        runCatching { conicLight?.getMethod(name, *types) }.getOrNull()
-    private val conicSupported by lazy { conicMethod("isSupported") }
-    private val conicColor by lazy { conicMethod("setColor", Int::class.javaPrimitiveType) }
-    private val conicShape by lazy {
-        val f = Float::class.javaPrimitiveType
-        conicMethod("setShape", f, f, f, f, f, f, f)
-    }
-    private val conicDraw by lazy {
-        val f = Float::class.javaPrimitiveType
-        conicMethod("draw", Canvas::class.java, f, f, f, f, Boolean::class.javaPrimitiveType)
-    }
-
-    class ConicLight internal constructor(private val handle: Any) {
-        fun setColor(color: Int) {
-            conicColor?.invoke(handle, color)
-        }
+    class ConicLight internal constructor(private val light: SeekLight) {
+        fun setColor(color: Int) = light.setColor(color)
 
         fun setShape(
             height: Float,
@@ -175,9 +71,7 @@ object CosHooks {
             w0: Float,
             alpha1: Float,
             alpha2: Float,
-        ) {
-            conicShape?.invoke(handle, height, heightFalloff, coneK, secondConeK, w0, alpha1, alpha2)
-        }
+        ) = light.setShape(SeekLight.Shape(height, heightFalloff, coneK, secondConeK, w0, alpha1, alpha2))
 
         fun draw(
             canvas: Canvas,
@@ -186,22 +80,12 @@ object CosHooks {
             length: Float,
             fraction: Float,
             rtl: Boolean,
-        ) {
-            conicDraw?.invoke(handle, canvas, progressStart, centerY, length, fraction, rtl)
-        }
+        ) = light.draw(canvas, progressStart, centerY, length, fraction, rtl)
     }
 
-    fun newConicLight(): ConicLight? =
-        runCatching { conicLight?.getConstructor()?.newInstance() }
-            .getOrNull()
-            ?.takeIf { conicSupported?.invoke(it) == true }
-            ?.let { ConicLight(it) }
+    fun newConicLight(): ConicLight? = runCatching { ConicLight(SeekLight()) }.getOrNull()
 
-    val available: Boolean
-        get() = create != null
-
-    fun createRim(): RuntimeShader? =
-        runCatching { rimCreate?.invoke(null) as RuntimeShader? }.getOrNull()
+    fun createRim(): RuntimeShader? = runCatching { GlassRim.create() }.getOrNull()
 
     fun updateRim(
         shader: RuntimeShader,
@@ -210,48 +94,50 @@ object CosHooks {
         radius: Float,
         active: Boolean,
         dark: Boolean,
-    ) {
-        rimUpdate?.invoke(null, shader, width, height, radius, active, dark)
-    }
+    ) = GlassRim.update(shader, width, height, radius, active, dark)
 
-    class Spring internal constructor(private val handle: Any) {
+    class Spring internal constructor(start: Float, onUpdate: (Float) -> Unit) {
+        private val holder = FloatValueHolder(start)
+        private val animation =
+            SpringAnimation(holder).apply {
+                spring = SpringForce().setDampingRatio(1f)
+                setMinimumVisibleChange(0.001f)
+                addUpdateListener { _, value, _ -> onUpdate(value) }
+            }
+        private val update = onUpdate
+
         fun animateTo(target: Float, response: Float, bounce: Float = 0f) {
-            springTo!!.invoke(handle, target, response, bounce)
+            animation.spring
+                .setStiffness((2 * PI / response).pow(2).toFloat())
+                .setDampingRatio(1f - bounce)
+            if (!animation.isRunning) animation.setStartValue(holder.value)
+            animation.animateToFinalPosition(target)
         }
 
         fun snapTo(value: Float) {
-            springSnap!!.invoke(handle, value)
+            animation.cancel()
+            holder.value = value
+            update(value)
         }
     }
 
-    fun newSpring(start: Float, onUpdate: (Float) -> Unit): Spring? =
-        springNew?.newInstance(start, Consumer<Float> { onUpdate(it) })?.let { Spring(it) }
-
-    fun createBrightnessSlider(context: Context, onChange: (Float, Boolean) -> Unit): View =
-        create!!.invoke(null, context, BiConsumer<Float, Boolean> { f, done -> onChange(f, done) })
-            as View
-
-    fun setBrightnessFraction(view: View, fraction: Float) {
-        setFraction?.invoke(null, view, fraction)
-    }
+    fun newSpring(start: Float, onUpdate: (Float) -> Unit): Spring = Spring(start, onUpdate)
 }
 
 @Composable
 fun rememberCosExperience(): Boolean {
-    if (!CosHooks.available) return false
-    val context = LocalContext.current
-    val resolver = context.contentResolver
+    val resolver = LocalContext.current.contentResolver
     var on by remember {
         mutableStateOf(Settings.Secure.getInt(resolver, CosHooks.SETTING, 0) == 1)
     }
     DisposableEffect(resolver) {
-        val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean) {
-                on = Settings.Secure.getInt(resolver, CosHooks.SETTING, 0) == 1
+        val observer =
+            object : ContentObserver(Handler(Looper.getMainLooper())) {
+                override fun onChange(selfChange: Boolean) {
+                    on = Settings.Secure.getInt(resolver, CosHooks.SETTING, 0) == 1
+                }
             }
-        }
-        resolver.registerContentObserver(
-            Settings.Secure.getUriFor(CosHooks.SETTING), false, observer)
+        resolver.registerContentObserver(Settings.Secure.getUriFor(CosHooks.SETTING), false, observer)
         onDispose { resolver.unregisterContentObserver(observer) }
     }
     SideEffect { GlassBackdrop.cos.value = on }
