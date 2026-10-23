@@ -8,8 +8,10 @@ package com.penguin.systemui.dagger
 import android.content.Context
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.globalactions.IosPowerMenuLayout
+import com.android.systemui.keyguard.ui.composable.clock.CosFluidClockFace
 import com.android.systemui.keyguard.ui.composable.media.ExpandableLockscreenPlayer
 import com.android.systemui.penguin.DepthSubject
+import com.android.systemui.penguin.LockscreenClockFace
 import com.android.systemui.penguin.LockscreenPlayer
 import com.android.systemui.penguin.PowerMenuLayout
 import com.android.systemui.penguin.QsPanels
@@ -37,6 +39,8 @@ interface PenguinSystemUIModule {
     @Binds fun statusBarIsland(impl: DynamicIsland): StatusBarIsland
 
     @Binds fun lockscreenPlayer(impl: ExpandableLockscreenPlayer): LockscreenPlayer
+
+    @Binds fun lockscreenClockFace(impl: CosFluidClockFace): LockscreenClockFace
 
     @Binds @SysUISingleton fun qsPanels(impl: PenguinQsPanels): QsPanels
 
