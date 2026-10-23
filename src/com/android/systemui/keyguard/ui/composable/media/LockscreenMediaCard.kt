@@ -86,10 +86,11 @@ import com.android.systemui.media.remedia.ui.viewmodel.MediaCardViewModel
 import com.android.systemui.media.remedia.ui.viewmodel.MediaNavigationViewModel
 import com.android.systemui.media.remedia.ui.viewmodel.MediaSecondaryActionViewModel
 import com.android.systemui.media.remedia.ui.viewmodel.MediaViewModel
+import com.android.systemui.penguin.CosFeature
+import com.android.systemui.penguin.rememberCosFeature
 import com.android.systemui.qs.composefragment.LocalCosSeekColor
 import com.android.systemui.qs.composefragment.cosSeekGlow
 import com.android.systemui.qs.composefragment.cosStatusGlow
-import com.android.systemui.qs.composefragment.rememberCosExperience
 import com.android.systemui.qs.composefragment.rememberCosMediaColor
 import com.android.systemui.qs.shared.style.LiquidGlassSurface
 import com.android.systemui.qs.shared.style.glassBackdropRegion
@@ -157,7 +158,7 @@ private fun MediaCardBody(card: MediaCardViewModel, isSelected: Boolean) {
     val fraction = { LockscreenMediaExpansion.fraction }
     val f = fraction()
     val glass = liquidGlassEnabled()
-    val cos = rememberCosExperience()
+    val cos = rememberCosFeature(CosFeature.LockscreenMedia)
     Expandable(
         controller = rememberExpandableController(color = Color.Transparent, shape = RoundedCornerShape(CardCorner)),
         useModifierBasedImplementation = true,

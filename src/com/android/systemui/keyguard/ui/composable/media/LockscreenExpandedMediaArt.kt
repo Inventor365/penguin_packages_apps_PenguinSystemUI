@@ -16,7 +16,6 @@
 
 package com.android.systemui.keyguard.ui.composable.media
 
-import com.android.systemui.qs.composefragment.rememberCosExperience
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -54,7 +53,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.android.systemui.penguin.CosFeature
 import com.android.systemui.penguin.DepthSubject
+import com.android.systemui.penguin.rememberCosFeature
 import java.io.File
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -101,7 +102,7 @@ fun LockscreenExpandedMediaArt(
     var squareArt by remember { mutableStateOf<File?>(null) }
     var tallRendering by remember { mutableStateOf(false) }
     val track = state.track
-    val cos = rememberCosExperience()
+    val cos = rememberCosFeature(CosFeature.LockscreenMedia)
     LaunchedEffect(state.enabled, state.motionArtEnabled, track, cos) {
         tallArt = null
         squareArt = null

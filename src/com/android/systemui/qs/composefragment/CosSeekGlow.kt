@@ -18,6 +18,8 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.LayoutDirection
+import com.android.systemui.penguin.CosFeature
+import com.android.systemui.penguin.rememberCosFeature
 import kotlin.math.PI
 
 val LocalCosSeekColor = compositionLocalOf { 0 }
@@ -50,7 +52,7 @@ fun Modifier.cosSeekGlow(
     dragging: Boolean,
     color: Int = 0,
 ): Modifier {
-    if (!rememberCosExperience()) return this
+    if (!rememberCosFeature(CosFeature.MediaLights)) return this
     val light = remember { CosHooks.newConicLight() } ?: return this
     val glowColor = color.takeIf { it != 0 } ?: LocalCosSeekColor.current.takeIf { it != 0 } ?: WHITE
     LaunchedEffect(glowColor) { light.setColor(glowColor) }

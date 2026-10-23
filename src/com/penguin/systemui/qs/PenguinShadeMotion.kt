@@ -7,11 +7,12 @@ package com.penguin.systemui.qs
 
 import androidx.compose.foundation.OverscrollFactory
 import androidx.compose.runtime.Composable
-import com.android.systemui.qs.composefragment.rememberCosExperience
 import com.android.compose.animation.scene.SceneTransitionsBuilder
 import com.android.compose.animation.scene.TransitionBuilder
 import com.android.compose.gesture.effect.rememberControlCentreOverscrollEffectFactory
+import com.android.systemui.penguin.CosFeature
 import com.android.systemui.penguin.ShadeMotion
+import com.android.systemui.penguin.rememberCosFeature
 import com.android.systemui.qs.composefragment.effectiveQsPanelStyle
 import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.scene.shared.model.Overlays
@@ -33,7 +34,7 @@ class PenguinShadeMotion @Inject constructor() : ShadeMotion {
     @Composable
     override fun key(): Any? {
         defaultQsStyle = effectiveQsPanelStyle() == QsPanelStyle.Default
-        cos = rememberCosExperience()
+        cos = rememberCosFeature(CosFeature.Shade)
         return defaultQsStyle to cos
     }
 

@@ -6,25 +6,12 @@
 package com.android.systemui.qs.composefragment
 
 import android.content.Context
-import android.database.ContentObserver
 import android.graphics.Canvas
 import android.graphics.RuntimeShader
 import android.graphics.drawable.Drawable
-import android.os.Handler
-import android.os.Looper
-import android.provider.Settings
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.dynamicanimation.animation.FloatValueHolder
 import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
-import com.android.systemui.qs.shared.style.GlassBackdrop
 import com.penguin.systemui.light.CardLight
 import com.penguin.systemui.light.EdgeSweep
 import com.penguin.systemui.light.GlassRim
@@ -33,8 +20,6 @@ import kotlin.math.PI
 import kotlin.math.pow
 
 object CosHooks {
-    const val SETTING = "penguin_cos_experience"
-
     @Suppress("UNUSED_PARAMETER")
     fun createMediaLight(context: Context): Drawable = CardLight()
 
@@ -122,24 +107,4 @@ object CosHooks {
     }
 
     fun newSpring(start: Float, onUpdate: (Float) -> Unit): Spring = Spring(start, onUpdate)
-}
-
-@Composable
-fun rememberCosExperience(): Boolean {
-    val resolver = LocalContext.current.contentResolver
-    var on by remember {
-        mutableStateOf(Settings.Secure.getInt(resolver, CosHooks.SETTING, 0) == 1)
-    }
-    DisposableEffect(resolver) {
-        val observer =
-            object : ContentObserver(Handler(Looper.getMainLooper())) {
-                override fun onChange(selfChange: Boolean) {
-                    on = Settings.Secure.getInt(resolver, CosHooks.SETTING, 0) == 1
-                }
-            }
-        resolver.registerContentObserver(Settings.Secure.getUriFor(CosHooks.SETTING), false, observer)
-        onDispose { resolver.unregisterContentObserver(observer) }
-    }
-    SideEffect { GlassBackdrop.cos.value = on }
-    return on
 }

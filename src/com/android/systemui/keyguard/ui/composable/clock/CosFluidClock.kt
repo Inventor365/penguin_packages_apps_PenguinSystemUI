@@ -48,8 +48,9 @@ import com.android.systemui.clocks.ClockStyle
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.keyguard.data.repository.InWindowLauncherUnlockAnimationRepository
+import com.android.systemui.penguin.CosFeature
+import com.android.systemui.penguin.CosFeatures
 import com.android.systemui.penguin.LockscreenClockFace
-import com.android.systemui.qs.composefragment.CosHooks
 import com.android.systemui.shared.clocks.ClockRegistry
 import com.android.systemui.shared.clocks.DEFAULT_CLOCK_ID
 import com.android.systemui.shared.clocks.FluidDigits
@@ -90,7 +91,7 @@ constructor(
     init {
         val resolver = context.contentResolver
         val read = {
-            settingOn = Settings.Secure.getInt(resolver, CosHooks.SETTING, 0) == 1
+            settingOn = CosFeatures.isOn(context, CosFeature.Clock)
             customStyle = Settings.Secure.getInt(resolver, ClockStyle.CLOCK_STYLE_KEY, 0)
         }
         read()
@@ -98,7 +99,12 @@ constructor(
             object : ContentObserver(Handler(Looper.getMainLooper())) {
                 override fun onChange(selfChange: Boolean) = read()
             }
-        resolver.registerContentObserver(Settings.Secure.getUriFor(CosHooks.SETTING), false, observer)
+        resolver.registerContentObserver(Settings.Secure.getUriFor(CosFeature.ALL), false, observer)
+        resolver.registerContentObserver(
+            Settings.Secure.getUriFor(CosFeature.Clock.key),
+            false,
+            observer,
+        )
         resolver.registerContentObserver(
             Settings.Secure.getUriFor(ClockStyle.CLOCK_STYLE_KEY),
             false,

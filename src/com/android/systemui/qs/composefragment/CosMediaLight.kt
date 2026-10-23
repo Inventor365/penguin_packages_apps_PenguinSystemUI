@@ -27,6 +27,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.core.graphics.drawable.toBitmap
+import com.android.systemui.penguin.CosFeature
+import com.android.systemui.penguin.rememberCosFeature
 import com.google.ux.material.libmonet.hct.Hct
 import com.google.ux.material.libmonet.scheme.SchemeContent
 import kotlinx.coroutines.Dispatchers
@@ -35,7 +37,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun Modifier.cosMediaLight(artwork: Drawable?, corner: Dp, artworkCenter: Offset): Modifier {
-    if (!rememberCosExperience()) return this
+    if (!rememberCosFeature(CosFeature.MediaLights)) return this
     val context = LocalContext.current
     val light = remember { CosHooks.createMediaLight(context) } ?: return this
     val night = isSystemInDarkTheme()

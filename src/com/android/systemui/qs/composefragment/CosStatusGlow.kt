@@ -16,6 +16,8 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.Dp
+import com.android.systemui.penguin.CosFeature
+import com.android.systemui.penguin.rememberCosFeature
 
 private const val SWEEP_MS = 1200
 
@@ -26,7 +28,7 @@ fun Modifier.cosStatusGlow(
     capsule: Boolean = false,
     startAngle: Float = 0.25f,
 ): Modifier {
-    if (!rememberCosExperience()) return this
+    if (!rememberCosFeature(CosFeature.MediaLights)) return this
     val glow = remember { CosHooks.newStrokeGlow() } ?: return this
     val progress = remember { Animatable(1f) }
 

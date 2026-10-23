@@ -5,6 +5,8 @@
 
 package com.android.systemui.qs.composefragment
 
+import com.android.systemui.penguin.CosFeature
+import com.android.systemui.penguin.rememberCosFeature
 import com.android.systemui.qs.shared.style.QsPanelStyle
 
 import com.android.systemui.qs.shared.style.LocalQsPanelStyle
@@ -356,7 +358,7 @@ fun VolumeLayout(
     }
 
     val cosVolume =
-        LocalQsPanelStyle.current == QsPanelStyle.ColorOs || rememberCosExperience()
+        LocalQsPanelStyle.current == QsPanelStyle.ColorOs || rememberCosFeature(CosFeature.QuickSettings)
 
     val toggleMute = {
         audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_TOGGLE_MUTE, 0)
@@ -545,7 +547,7 @@ fun BrightnessLayout(
         Unit
     }
 
-    val cosExperience = rememberCosExperience()
+    val cosExperience = rememberCosFeature(CosFeature.QuickSettings)
     val cosStyle = LocalQsPanelStyle.current == QsPanelStyle.ColorOs
     val commonModifier =
         Modifier.systemGestureExclusionInShade(enabled = { enable })

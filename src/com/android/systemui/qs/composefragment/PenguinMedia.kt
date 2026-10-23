@@ -31,6 +31,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextStyle
+import com.android.systemui.penguin.CosFeature
+import com.android.systemui.penguin.rememberCosFeature
 import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.Image
@@ -221,7 +223,7 @@ private fun SquareMediaCard(
     height: Dp? = null,
 ) {
     val moduleHeight = height ?: qsModuleHeight(2)
-    val cos = rememberCosExperience()
+    val cos = rememberCosFeature(CosFeature.QuickSettings)
 
     MediaCardContainer(card, RoundedCornerShape(ArtworkCorner)) {
     Column(
