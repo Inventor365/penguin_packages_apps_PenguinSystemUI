@@ -16,13 +16,15 @@ import android.provider.Settings
 import android.view.View
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import java.lang.reflect.Method
+import com.android.systemui.qs.shared.style.GlassBackdrop
 import java.lang.reflect.Constructor
+import java.lang.reflect.Method
 import java.util.function.BiConsumer
 import java.util.function.Consumer
 
@@ -252,5 +254,6 @@ fun rememberCosExperience(): Boolean {
             Settings.Secure.getUriFor(CosHooks.SETTING), false, observer)
         onDispose { resolver.unregisterContentObserver(observer) }
     }
+    SideEffect { GlassBackdrop.cos.value = on }
     return on
 }

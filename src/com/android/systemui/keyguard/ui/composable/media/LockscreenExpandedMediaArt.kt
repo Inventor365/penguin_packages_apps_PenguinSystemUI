@@ -16,6 +16,7 @@
 
 package com.android.systemui.keyguard.ui.composable.media
 
+import com.android.systemui.qs.composefragment.rememberCosExperience
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -100,14 +101,20 @@ fun LockscreenExpandedMediaArt(
     var squareArt by remember { mutableStateOf<File?>(null) }
     var tallRendering by remember { mutableStateOf(false) }
     val track = state.track
-    LaunchedEffect(state.enabled, state.motionArtEnabled, track) {
+    val cos = rememberCosExperience()
+    LaunchedEffect(state.enabled, state.motionArtEnabled, track, cos) {
         tallArt = null
         squareArt = null
         tallRendering = false
         if (state.enabled && state.motionArtEnabled && track != null) {
             val (artist, title) = track
-            tallArt = MotionArt.find(context, artist, title, MotionArt.Kind.TALL)
-            if (tallArt == null) {
+            if (cos) {
+                squareArt = MotionArt.find(context, artist, title, MotionArt.Kind.SQUARE)
+            }
+            if (squareArt == null) {
+                tallArt = MotionArt.find(context, artist, title, MotionArt.Kind.TALL)
+            }
+            if (tallArt == null && squareArt == null) {
                 squareArt = MotionArt.find(context, artist, title, MotionArt.Kind.SQUARE)
             }
         }
@@ -133,6 +140,14 @@ fun LockscreenExpandedMediaArt(
         val artwork = state.artwork
         if (f <= 0f || artwork == null) return@Box
         val density = LocalDensity.current
+        if (cos) {
+            CosImmersiveArt(
+                artwork,
+                squareArt ?: tallArt,
+                Modifier.fillMaxSize().graphicsLayer { this.alpha = f },
+            )
+            return@Box
+        }
 
         Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = f }) {
             if (tallArt == null) {

@@ -16,9 +16,6 @@
 
 package com.android.systemui.keyguard.ui.composable.media
 
-import com.android.systemui.qs.composefragment.rememberCosMediaColor
-import com.android.systemui.qs.composefragment.LocalCosSeekColor
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -42,12 +39,11 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import com.android.systemui.qs.composefragment.cosSeekGlow
-import com.android.systemui.qs.composefragment.cosStatusGlow
 import androidx.compose.material3.Icon as M3Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
@@ -56,12 +52,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp as lerpColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp as lerpColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -88,7 +86,13 @@ import com.android.systemui.media.remedia.ui.viewmodel.MediaCardViewModel
 import com.android.systemui.media.remedia.ui.viewmodel.MediaNavigationViewModel
 import com.android.systemui.media.remedia.ui.viewmodel.MediaSecondaryActionViewModel
 import com.android.systemui.media.remedia.ui.viewmodel.MediaViewModel
+import com.android.systemui.qs.composefragment.LocalCosSeekColor
+import com.android.systemui.qs.composefragment.cosSeekGlow
+import com.android.systemui.qs.composefragment.cosStatusGlow
+import com.android.systemui.qs.composefragment.rememberCosExperience
+import com.android.systemui.qs.composefragment.rememberCosMediaColor
 import com.android.systemui.qs.shared.style.LiquidGlassSurface
+import com.android.systemui.qs.shared.style.glassBackdropRegion
 import com.android.systemui.qs.shared.style.glassRim
 import com.android.systemui.qs.shared.style.liquidGlassEnabled
 import com.android.systemui.res.R
@@ -153,6 +157,7 @@ private fun MediaCardBody(card: MediaCardViewModel, isSelected: Boolean) {
     val fraction = { LockscreenMediaExpansion.fraction }
     val f = fraction()
     val glass = liquidGlassEnabled()
+    val cos = rememberCosExperience()
     Expandable(
         controller = rememberExpandableController(color = Color.Transparent, shape = RoundedCornerShape(CardCorner)),
         useModifierBasedImplementation = true,
@@ -166,20 +171,26 @@ private fun MediaCardBody(card: MediaCardViewModel, isSelected: Boolean) {
                     else Modifier.border(1.dp, CardBorder, RoundedCornerShape(CardCorner))
                 )
         ) {
-        WallpaperBlur(
-            alpha = {
-                if (LockscreenMediaExpansion.fraction > 0f) 0f
-                else LockscreenMediaExpansion.lockscreenAlpha
-            },
-            corner = CardCorner,
-            modifier = Modifier.matchParentSize(),
-        )
+        val immersive = cos && f > 0f
+        if (immersive) {
+            Box(Modifier.matchParentSize().glassBackdropRegion(CardCorner))
+        } else {
+            WallpaperBlur(
+                alpha = {
+                    if (LockscreenMediaExpansion.fraction > 0f) 0f
+                    else LockscreenMediaExpansion.lockscreenAlpha
+                },
+                corner = CardCorner,
+                modifier = Modifier.matchParentSize(),
+            )
+        }
         Box(
             Modifier.matchParentSize()
                 .background(
-                    lerpColor(if (glass) LiquidGlassSurface else CompactGlass, SmokyGlass, f)
+                    if (immersive) Color.Transparent
+                    else lerpColor(if (glass) LiquidGlassSurface else CompactGlass, SmokyGlass, f)
                 )
-                .glassRim(RoundedCornerShape(CardCorner))
+                .then(if (immersive) Modifier else Modifier.glassRim(RoundedCornerShape(CardCorner)))
                 .cosStatusGlow(card.title to card.subtitle, CardCorner)
         )
         Column(
