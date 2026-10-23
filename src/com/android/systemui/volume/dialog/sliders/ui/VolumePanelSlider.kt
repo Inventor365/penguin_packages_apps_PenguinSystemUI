@@ -5,13 +5,18 @@
 
 package com.android.systemui.volume.dialog.sliders.ui
 
+import android.os.SystemClock
+import android.provider.Settings
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,11 +27,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.Dp
@@ -50,8 +59,22 @@ import com.android.systemui.volume.ui.compose.slider.Slider
 import com.android.systemui.volume.ui.compose.slider.SliderIcon
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import com.penguin.systemui.R
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import com.android.systemui.qs.composefragment.cosGlass
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -73,8 +96,20 @@ fun VolumePanelSlider(
     val isPillStyle = panelStyle != VolumePanelStyle.DEFAULT
     val isOneUi = panelStyle == VolumePanelStyle.ONE_UI
     val isMyUi = panelStyle == VolumePanelStyle.MYUI
+    val isCos = panelStyle == VolumePanelStyle.COLOR_OS
     val colors =
         when {
+            isCos ->
+                SliderDefaults.colors(
+                    activeTrackColor = Color.Transparent,
+                    inactiveTrackColor = Color.Transparent,
+                    activeTickColor = Color.Transparent,
+                    inactiveTickColor = Color.Transparent,
+                    disabledActiveTrackColor = Color.Transparent,
+                    disabledInactiveTrackColor = Color.Transparent,
+                    disabledActiveTickColor = Color.Transparent,
+                    disabledInactiveTickColor = Color.Transparent,
+                )
             isMyUi -> {
                 val active = colorResource(R.color.volume_panel_myui_track_active)
                 val inactive = colorResource(R.color.volume_panel_myui_track_inactive)
@@ -154,7 +189,7 @@ fun VolumePanelSlider(
     val trackOutline = colorResource(R.color.volume_panel_expandable_track_outline)
 
     val bottomIcon: (@Composable BoxScope.(iconsState: SliderIconsState) -> Unit)? =
-        if (isPillStyle && !isMyUi) {
+        if (isPillStyle && !isMyUi && !isCos) {
             val iconTint =
                 if (isOneUi) {
                     colorResource(R.color.volume_panel_oneui_icon)
@@ -240,7 +275,7 @@ fun VolumePanelSlider(
                     modifier =
                         if (isPillStyle) {
                             Modifier.clip(RoundedCornerShape(trackCornerSize))
-                                .thenIf(!isOneUi && !isMyUi) {
+                                .thenIf(!isOneUi && !isMyUi && !isCos) {
                                     Modifier.border(
                                         1.dp,
                                         trackOutline,
@@ -320,7 +355,114 @@ fun VolumePanelSlider(
         )
     }
 
-    if (isMyUi) {
+    if (isCos) {
+        val range = sliderStateModel.valueRange
+        val span = range.endInclusive - range.start
+        val fraction =
+            if (span <= 0f) 0f
+            else ((sliderStateModel.value - range.start) / span).coerceIn(0f, 1f)
+        val dragged by interactionSource.collectIsDraggedAsState()
+        var touching by remember { mutableStateOf(false) }
+        var slim by remember { mutableStateOf(false) }
+        var nudge by remember { mutableStateOf(false) }
+        val lastKeyChange = remember { longArrayOf(0L) }
+        val lastTouch = remember { longArrayOf(0L) }
+        LaunchedEffect(sliderStateModel.value) {
+            val now = SystemClock.uptimeMillis()
+            if (touching || dragged || now - lastTouch[0] < COS_VOLUME_TOUCH_GRACE_MS) {
+                return@LaunchedEffect
+            }
+            val showing = now - lastKeyChange[0] < COS_VOLUME_SESSION_MS
+            lastKeyChange[0] = now
+            if (!showing) return@LaunchedEffect
+            slim = true
+            nudge = true
+            delay(COS_VOLUME_NUDGE_MS)
+            nudge = false
+            delay(COS_VOLUME_SESSION_MS)
+            slim = false
+        }
+        val barWidth by
+            animateFloatAsState(
+                if (slim) COS_VOLUME_SLIM_WIDTH else 1f,
+                if (slim) spring(dampingRatio = 0.9f, stiffness = 320f)
+                else spring(dampingRatio = 0.75f, stiffness = 250f),
+                label = "cosVolumeSlim",
+            )
+        val onLeft =
+            Settings.Secure.getInt(
+                LocalContext.current.contentResolver,
+                Settings.Secure.VOLUME_PANEL_ON_LEFT,
+                0,
+            ) == 1
+        val width = dimensionResource(R.dimen.volume_panel_cos_slider_width)
+        val edgeShift = width * ((1f - COS_VOLUME_SLIM_WIDTH) * 0.5f) * if (onLeft) -1f else 1f
+        LaunchedEffect(slim) { CosVolumeSlim.slim.value = slim }
+        val shift by
+            animateDpAsState(
+                when {
+                    !slim -> 0.dp
+                    nudge -> edgeShift * 0.6f
+                    else -> edgeShift
+                },
+                spring(dampingRatio = 0.9f, stiffness = 320f),
+                label = "cosVolumeNudge",
+            )
+        val widen by
+            animateFloatAsState(
+                if (dragged) 1.16f else 1f,
+                spring(dampingRatio = 1f, stiffness = 987f),
+                label = "cosVolumeWiden",
+            )
+        val shape = RoundedCornerShape(50)
+        Box(
+            modifier.width(width).pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        touching = event.changes.any { it.pressed }
+                        lastTouch[0] = SystemClock.uptimeMillis()
+                        if (touching) {
+                            slim = false
+                            nudge = false
+                        }
+                    }
+                }
+            }
+        ) {
+            Box(
+                Modifier.align(Alignment.Center)
+                    .offset(x = shift)
+                    .fillMaxHeight()
+                    .width(width * barWidth)
+                    .graphicsLayer { scaleX = widen }
+                    .cosGlass(shape)
+            ) {
+                Box(
+                    Modifier.align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .fillMaxHeight(fraction)
+                        .background(Color(0xF7FFFFFF))
+                )
+                val covered =
+                    dimensionResource(R.dimen.volume_panel_cos_slider_height) * fraction > 32.dp
+                Icon(
+                    icon = sliderStateModel.icon,
+                    tint = { if (covered) Color(0xB3000000) else Color(0xE6FFFFFF) },
+                    modifier =
+                        Modifier.align(Alignment.BottomCenter)
+                            .padding(bottom = 20.dp)
+                            .requiredSize(24.dp)
+                            .graphicsLayer {
+                                alpha =
+                                    ((barWidth - COS_VOLUME_SLIM_WIDTH) / (1f - COS_VOLUME_SLIM_WIDTH))
+                                        .coerceIn(0f, 1f)
+                            },
+                )
+            }
+            slider(Modifier.fillMaxSize())
+        }
+    } else if (isMyUi) {
         val iconTint = colorResource(R.color.volume_panel_myui_icon)
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
             slider(Modifier.weight(1f))
@@ -344,4 +486,13 @@ fun VolumePanelSlider(
     } else {
         slider(modifier)
     }
+}
+
+private const val COS_VOLUME_SLIM_WIDTH = 0.16f
+private const val COS_VOLUME_NUDGE_MS = 300L
+private const val COS_VOLUME_SESSION_MS = 3000L
+private const val COS_VOLUME_TOUCH_GRACE_MS = 1000L
+
+object CosVolumeSlim {
+    val slim = MutableStateFlow(false)
 }

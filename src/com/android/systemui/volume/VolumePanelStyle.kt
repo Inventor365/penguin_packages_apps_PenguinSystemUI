@@ -19,6 +19,8 @@ package com.android.systemui.volume
 import android.content.Context
 import android.os.UserHandle
 import android.provider.Settings
+import com.android.systemui.penguin.CosFeature
+import com.android.systemui.penguin.CosFeatures
 
 enum class VolumePanelStyle(val value: Int) {
     DEFAULT(0),
@@ -27,7 +29,9 @@ enum class VolumePanelStyle(val value: Int) {
 
     ONE_UI(2),
 
-    MYUI(3);
+    MYUI(3),
+
+    COLOR_OS(4);
 
     val isCard: Boolean
         get() = this == ONE_UI || this == MYUI
@@ -39,7 +43,8 @@ enum class VolumePanelStyle(val value: Int) {
             values().firstOrNull { it.value == value } ?: DEFAULT
 
         fun current(context: Context): VolumePanelStyle =
-            fromValue(
+            if (CosFeatures.isOn(context, CosFeature.Volume)) COLOR_OS
+            else fromValue(
                 Settings.Secure.getIntForUser(
                     context.contentResolver,
                     SETTING_NAME,
