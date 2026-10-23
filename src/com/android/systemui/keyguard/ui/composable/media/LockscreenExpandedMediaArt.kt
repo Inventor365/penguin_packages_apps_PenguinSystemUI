@@ -17,6 +17,7 @@
 package com.android.systemui.keyguard.ui.composable.media
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -45,9 +46,12 @@ import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
@@ -130,6 +134,16 @@ fun LockscreenExpandedMediaArt(
             squareArt = square
             if (tall != null || square != null) return@LaunchedEffect
             if (attempt < 2) delay(15_000L * (attempt + 1))
+        }
+    }
+    // Tablets draw the cover far larger than the session's bitmap: use the store's full-size one.
+    var cover by remember(state.track) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(state.enabled, state.motionArtEnabled, track, lookupVisible) {
+        if (!state.enabled || !state.motionArtEnabled || track == null || !lookupVisible) {
+            return@LaunchedEffect
+        }
+        if (cover == null) {
+            cover = MotionArt.findCover(context, track.first, track.second)?.asImageBitmap()
         }
     }
     val coverAlpha by animateFloatAsState(if (tallRendering) 0f else 1f, label = "cover")
@@ -238,7 +252,9 @@ fun LockscreenExpandedMediaArt(
                 .clip(RoundedCornerShape(lerp(10f, 22f, f).dp))
                 .pointerInput(Unit) { detectTapGestures { state.collapse() } }
         ) {
-            Artwork(artwork, Modifier.fillMaxSize())
+            cover?.let {
+                Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            } ?: Artwork(artwork, Modifier.fillMaxSize())
             squareArt?.let { MotionArtVideo(it, Modifier.fillMaxSize()) }
         }
     }
