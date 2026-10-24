@@ -33,6 +33,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.text.font.FontWeight
 import com.android.systemui.qs.composefragment.cosStatusGlow
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -105,6 +107,7 @@ fun StatusBarDynamicIslandChip(
     onTap: () -> Unit,
     modifier: Modifier = Modifier,
     onChipBoundsChanged: (Rect) -> Unit = {},
+    cos: Boolean = false,
 ) {
     val isMediaChip = viewModel.popupContent is PopupContentModel.Media
     val chipShape = RoundedCornerShape(50)
@@ -138,7 +141,7 @@ fun StatusBarDynamicIslandChip(
         view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
         mediaOpenApp?.invoke()
     }
-    if (viewModel.popupContent.isUtilityStatusContent() && viewModel.icons.isNotEmpty()) {
+    if (!cos && viewModel.popupContent.isUtilityStatusContent() && viewModel.icons.isNotEmpty()) {
         UtilityStatusIslandChip(
             viewModel = viewModel,
             onTap = hapticOnTap,
@@ -179,6 +182,17 @@ fun StatusBarDynamicIslandChip(
             .coerceAtLeast(56.dp)
 
     val collapseState = rememberDynamicIslandCollapseState(viewModel.isPopupShown)
+    val cosMedia = (viewModel.popupContent as? PopupContentModel.Media)?.takeIf { cos }?.model
+    val cosArtTint =
+        if (cosMedia != null) {
+            rememberCosArtTint(
+                remember(cosMedia.artworkIcon) {
+                    (cosMedia.artworkIcon as? IconModel.Loaded)?.drawable
+                }
+            )
+        } else {
+            Color.Transparent
+        }
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by
@@ -192,32 +206,46 @@ fun StatusBarDynamicIslandChip(
         modifier =
             modifier
                 .then(boundsModifier)
-                .defaultMinSize(minHeight = 32.dp * heightScale)
-                .widthIn(
-                    min = compactWidth ?: 0.dp,
-                    max = compactWidth ?: (CompactIslandMaxWidth * widthScale),
+                .then(
+                    if (cos) {
+                        Modifier.height(CosIsland.height(cutoutSpec.holeSize))
+                            .widthIn(min = CosIsland.MinWidth, max = CosIsland.MaxWidth)
+                            .background(cosArtTint)
+                    } else {
+                        Modifier.defaultMinSize(minHeight = 32.dp * heightScale)
+                            .widthIn(
+                                min = compactWidth ?: 0.dp,
+                                max = compactWidth ?: (CompactIslandMaxWidth * widthScale),
+                            )
+                            .graphicsLayer {
+                                scaleX = collapseState.scaleX * pressScale
+                                scaleY = collapseState.scaleY * pressScale
+                            }
+                            .clip(chipShape)
+                            .background(Color.Black)
+                            .cosStatusGlow(viewModel.statusGlowKey(), IslandGlowCorner, capsule = true)
+                            .border(width = 1.dp, color = chipOutline, shape = chipShape)
+                    }
                 )
-                .graphicsLayer {
-                    scaleX = collapseState.scaleX * pressScale
-                    scaleY = collapseState.scaleY * pressScale
-                }
-                .clip(chipShape)
-                .background(Color.Black)
-                .cosStatusGlow(viewModel.statusGlowKey(), IslandGlowCorner, capsule = true)
-                .border(width = 1.dp, color = chipOutline, shape = chipShape)
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
                     onClick = hapticOnTap,
                     onLongClick = mediaOpenApp?.let { { hapticOnLongPress() } },
                 )
-                .padding(
-                    start = 8.dp * widthScale,
-                    end = 12.dp * widthScale,
-                    top = 7.dp * heightScale,
-                    bottom = 7.dp * heightScale,
-                )
-                .graphicsLayer { alpha = collapseState.contentAlpha },
+                .then(
+                    if (cos) {
+                        Modifier.padding(horizontal = CosIsland.Padding)
+                    } else {
+                        Modifier.padding(
+                                start = 8.dp * widthScale,
+                                end = 12.dp * widthScale,
+                                top = 7.dp * heightScale,
+                                bottom = 7.dp * heightScale,
+                            )
+                            .graphicsLayer { alpha = collapseState.contentAlpha }
+                    }
+                ),
         horizontalArrangement =
             if (isMediaChip) Arrangement.SpaceBetween else Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -227,13 +255,44 @@ fun StatusBarDynamicIslandChip(
                 index == 0 &&
                     (viewModel.popupContent is PopupContentModel.Media ||
                         viewModel.popupContent is PopupContentModel.LiveScore)
+            val cosArtwork =
+                (cosMedia?.artworkIcon as? IconModel.Loaded)?.drawable?.takeIf { isArtworkLike }
+            if (cosArtwork != null) {
+                CosCapsuleArtwork(cosArtwork, cosMedia.artworkIcon, CosIsland.IconSize)
+                return@forEachIndexed
+            }
+            val media = viewModel.popupContent as? PopupContentModel.Media
+            if (!cos && isArtworkLike && media != null) {
+                MediaArtFlip(track = media.model.songName?.toString(), artwork = chipIcon.icon) { icon ->
+                    Icon(
+                        icon = icon,
+                        modifier = Modifier.size(18.dp).clip(CircleShape),
+                        tint = Color.Unspecified,
+                    )
+                }
+                return@forEachIndexed
+            }
             Icon(
                 icon = chipIcon.icon,
                 modifier = Modifier
-                    .size(if (isArtworkLike) 18.dp else 16.dp)
+                    .size(
+                        when {
+                            cos && isArtworkLike -> CosIsland.IconSize
+                            cos -> CosIsland.IconSize * 0.8f
+                            isArtworkLike -> 18.dp
+                            else -> 16.dp
+                        }
+                    )
                     .then(
                         if (isArtworkLike) {
                             Modifier.clip(CircleShape)
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .then(
+                        if (isArtworkLike && cosMedia != null) {
+                            Modifier.cosAlbumShake(cosMedia.artworkIcon)
                         } else {
                             Modifier
                         }
@@ -252,8 +311,16 @@ fun StatusBarDynamicIslandChip(
             ?.let { text ->
                 Text(
                     text = text,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = chipContentColor,
+                    style =
+                        if (cos) {
+                            MaterialTheme.typography.labelLarge.copy(
+                                fontSize = CosIsland.TextSize,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        } else {
+                            MaterialTheme.typography.labelLarge
+                        },
+                    color = if (cos) CosIsland.TextColor else chipContentColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.widthIn(max = maxTextWidth),
@@ -265,7 +332,9 @@ fun StatusBarDynamicIslandChip(
                 val artworkDrawable = remember(popupContent.model.artworkIcon) {
                     (popupContent.model.artworkIcon as? IconModel.Loaded)?.drawable
                 }
-                if (popupContent.model.isPlaying) {
+                if (cos) {
+                    CosVoicePrint(playing = popupContent.model.isPlaying, size = CosIsland.IconSize)
+                } else if (popupContent.model.isPlaying) {
                     AudioReactiveBars(
                         isPlaying = true,
                         color = IslandAccents.Music,
@@ -577,6 +646,7 @@ data class DynamicIslandCutoutSpec(
     val embeddedGapWidth: Dp,
     val horizontalOffset: Dp,
     val cutoutCenterX: Float? = null,
+    val holeSize: Dp = 20.dp,
 )
 
 @Composable
@@ -607,6 +677,7 @@ fun rememberDynamicIslandCutoutSpec(): DynamicIslandCutoutSpec {
                 embeddedGapWidth = embeddedGapWidthDp,
                 horizontalOffset = horizontalOffsetDp,
                 cutoutCenterX = topCutout.exactCenterX(),
+                holeSize = topCutout.width().toDp(),
             )
         }
     }

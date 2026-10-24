@@ -16,12 +16,7 @@
 
 package com.android.systemui.statusbar.quickactions.popups.ui.compose
 
-import android.content.Context
-import android.graphics.Canvas
-import android.graphics.drawable.Drawable
-import android.graphics.drawable.GradientDrawable
-import android.view.View
-import android.view.ViewGroup
+import android.view.WindowManager
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.LocalContentColor
@@ -29,65 +24,69 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import com.android.axion.blur.AxBlurBackgroundRenderer
 import com.android.axion.blur.AxBlurColors
+import com.android.internal.graphics.drawable.BackgroundBlurDrawable
 import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.POPUP_COLOR_MODE_BLUR
 import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.POPUP_COLOR_MODE_SOLID_BLACK
 import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.observeDynamicIslandPopupColorMode
 import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.readDynamicIslandPopupColorMode
 
-private class PopupBlurHost(context: Context, private val cornerRadiusPx: Float) : View(context) {
-    private val blur = AxBlurBackgroundRenderer(this)
-    private val overlayColor = AxBlurColors.surfaceLightTint(context)
-
-    private val bgDrawable: GradientDrawable = GradientDrawable().also { d ->
-        d.setColor(0x00000000)
-        d.cornerRadius = cornerRadiusPx
-    }
-
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        blur.onAttachedToWindow()
-        (parent as? ViewGroup)?.layoutTransition = null
-    }
-
-    override fun onDetachedFromWindow() {
-        blur.onDetachedFromWindow()
-        super.onDetachedFromWindow()
-    }
-
-    override fun onVisibilityAggregated(isVisible: Boolean) {
-        super.onVisibilityAggregated(isVisible)
-        blur.onVisibilityAggregated(isVisible)
-    }
-
-    override fun verifyDrawable(who: Drawable): Boolean =
-        blur.verifyDrawable(who) || super.verifyDrawable(who)
-
-    override fun draw(canvas: Canvas) {
-        if (width > 0 && height > 0) {
-            bgDrawable.setBounds(0, 0, width, height)
-            if (!blur.drawBackgroundWithOverlayColor(canvas, bgDrawable, overlayColor)) {
-                bgDrawable.setColor(overlayColor and 0x00FFFFFF or (0xCC shl 24))
-                bgDrawable.draw(canvas)
-                bgDrawable.setColor(0x00000000)
-            }
+@Composable
+private fun Modifier.plainBlurBehind(shape: Shape): Modifier {
+    val view = LocalView.current
+    val context = LocalContext.current
+    val holder = remember(view) { arrayOfNulls<BackgroundBlurDrawable>(1) }
+    val overlayColor = remember(context) { AxBlurColors.surfaceLightTint(context) }
+    val blurEnabled =
+        remember(context) {
+            context.getSystemService(WindowManager::class.java)?.isCrossWindowBlurEnabled == true
         }
+    DisposableEffect(view) { onDispose { holder[0]?.setVisible(false, false) } }
+    return drawBehind {
+        val root = view.viewRootImpl
+        if (!blurEnabled || root == null) {
+            drawOutline(
+                shape.createOutline(size, layoutDirection, this),
+                Color(overlayColor and 0x00FFFFFF or (0xCC shl 24)),
+            )
+            return@drawBehind
+        }
+        val blur =
+            holder[0]
+                ?: root.createBackgroundBlurDrawable().also {
+                    it.setXfermode(null)
+                    holder[0] = it
+                }
+        val corner =
+            when (val outline = shape.createOutline(size, layoutDirection, this)) {
+                is Outline.Rounded -> outline.roundRect.topLeftCornerRadius.x
+                else -> 0f
+            }
+        blur.setVisible(true, false)
+        blur.setMaterial(PLAIN_BLUR)
+        blur.setColor(overlayColor)
+        blur.setBlurRadius(PopupBlurRadius.toPx().toInt())
+        blur.setCornerRadius(corner)
+        blur.setBounds(0, 0, size.width.toInt(), size.height.toInt())
+        drawIntoCanvas { blur.draw(it.nativeCanvas) }
     }
 }
 
@@ -112,27 +111,15 @@ fun PopupSurface(
     val body: @Composable () -> Unit = {
         Box(Modifier.padding(top = cameraClearance)) { content() }
     }
-    val mode = if (cameraClearance > 0.dp) POPUP_COLOR_MODE_SOLID_BLACK else colorMode
+    val mode =
+        if (cameraClearance > 0.dp && colorMode != POPUP_COLOR_MODE_BLUR) {
+            POPUP_COLOR_MODE_SOLID_BLACK
+        } else {
+            colorMode
+        }
     when (mode) {
         POPUP_COLOR_MODE_BLUR -> {
-            val density = LocalDensity.current
-            Box(
-                modifier = modifier
-                    .clip(shape)
-                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen },
-            ) {
-                AndroidView(
-                    factory = { ctx ->
-                        val radiusPx = with(density) { 32.dp.toPx() }
-                        PopupBlurHost(ctx, radiusPx).also {
-                            it.layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                            )
-                        }
-                    },
-                    modifier = Modifier.matchParentSize(),
-                )
+            Box(modifier = modifier.plainBlurBehind(shape).clip(shape)) {
                 CompositionLocalProvider(
                     LocalContentColor provides MaterialTheme.colorScheme.onSurface
                 ) {
@@ -162,3 +149,6 @@ fun PopupSurface(
 }
 
 val LocalPopupCameraClearance = compositionLocalOf { 0.dp }
+
+private const val PLAIN_BLUR = -1
+private val PopupBlurRadius = 34.dp

@@ -23,6 +23,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -52,6 +53,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -95,6 +98,7 @@ fun StatusBarPopup(
     canPage: Boolean = false,
     pageDirection: Int = 1,
     onPage: (Int) -> Unit = {},
+    cos: Boolean = false,
 ) {
     val density = Density(LocalContext.current)
     val statusBarHeightPx =
@@ -188,10 +192,42 @@ fun StatusBarPopup(
         val scaleY = remember { Animatable(initialScaleFromChip.y) }
         val alpha = remember { Animatable(0f) }
         val translationY = remember { Animatable(-24f) }
+        val cosBlurPx = with(density) { 12.dp.toPx() }
+        val blur = remember { Animatable(0f) }
         val colorMode = rememberPopupColorMode()
         val skipMotionOnDismiss = colorMode == POPUP_COLOR_MODE_BLUR
 
         LaunchedEffect(isVisible, popupBoundsInScreen != null) {
+            if (cos) {
+                if (isVisible && popupBoundsInScreen != null) {
+                    scaleX.snapTo(0.4f)
+                    scaleY.snapTo(0.4f)
+                    alpha.snapTo(0f)
+                    translationY.snapTo(-24f)
+                    blur.snapTo(cosBlurPx)
+                    coroutineScope {
+                        launch { translationY.animateTo(0f, tween(400, easing = CosCardMove)) }
+                        launch { alpha.animateTo(1f, tween(200, easing = CosCardEase)) }
+                        launch { blur.animateTo(0f, tween(400, easing = CosCardEase)) }
+                        for (scale in listOf(scaleX, scaleY)) {
+                            launch {
+                                scale.animateTo(1.03f, tween(400, easing = CosCardEase))
+                                scale.animateTo(1f, tween(200, easing = CosCardEase))
+                            }
+                        }
+                    }
+                } else if (!isVisible) {
+                    coroutineScope {
+                        for (scale in listOf(scaleX, scaleY)) {
+                            launch { scale.animateTo(0.4f, tween(200, easing = CosCardEase)) }
+                        }
+                        launch { translationY.animateTo(-24f, tween(200, easing = CosCardEase)) }
+                        launch { blur.animateTo(cosBlurPx, tween(200, easing = CosCardEase)) }
+                        alpha.animateTo(0f, tween(200, easing = CosCardEase))
+                    }
+                }
+                return@LaunchedEffect
+            }
             if (isVisible && popupBoundsInScreen != null) {
                 scaleX.snapTo(initialScaleFromChip.x)
                 scaleY.snapTo(initialScaleFromChip.y)
@@ -320,6 +356,10 @@ fun StatusBarPopup(
                             this.alpha = alpha.value
                             this.translationY = translationY.value
                             this.transformOrigin = transformOrigin
+                            val radius = blur.value
+                            renderEffect =
+                                if (radius > 0.5f) BlurEffect(radius, radius, TileMode.Decal)
+                                else null
                         }
             ) {
                 Box(
@@ -452,3 +492,6 @@ private fun IslandPopupContent(viewModel: PopupChipModel.Shown) {
 }
 
 private val PopupEdgePadding = 8.dp
+
+private val CosCardEase = CubicBezierEasing(0.33f, 0f, 0.67f, 1f)
+private val CosCardMove = CubicBezierEasing(0.6f, 0f, 0.1f, 1f)

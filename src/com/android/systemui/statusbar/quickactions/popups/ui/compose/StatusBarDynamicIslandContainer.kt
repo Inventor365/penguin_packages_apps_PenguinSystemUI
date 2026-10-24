@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -53,6 +54,8 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import com.android.systemui.penguin.CosFeature
+import com.android.systemui.penguin.rememberCosFeature
 import com.android.systemui.statusbar.quickactions.popups.ui.model.PopupChipId
 import com.android.systemui.statusbar.quickactions.popups.ui.model.PopupChipModel
 import kotlinx.coroutines.delay
@@ -77,6 +80,7 @@ fun StatusBarDynamicIslandContainer(
 ) {
     val cutoutSpec = rememberDynamicIslandCutoutSpec()
     val (_, heightScale) = rememberDynamicIslandSizeScale()
+    val cos = rememberCosFeature(CosFeature.Island)
     var selectedChipId by remember { mutableStateOf<PopupChipId?>(null) }
     var popupAnchorChip by remember { mutableStateOf<PopupChipModel.Shown?>(null) }
     var popupVisible by remember { mutableStateOf(false) }
@@ -198,9 +202,55 @@ fun StatusBarDynamicIslandContainer(
                 },
         contentAlignment = Alignment.Center,
     ) {
-        if (selectedChip == null) return@Box
-
-        Row(
+        if (cos) {
+            val leaving = remember { arrayOfNulls<PopupChipModel.Shown>(1) }
+            var present by remember { mutableStateOf(false) }
+            if (selectedChip != null) {
+                leaving[0] = selectedChip
+                SideEffect { present = true }
+            }
+            val chip = selectedChip ?: leaving[0]
+            if (chip != null && (selectedChip != null || present)) {
+                val slopPx = with(LocalDensity.current) { 30.dp.toPx() }
+                var dragged by remember { mutableFloatStateOf(0f) }
+                CosIslandShell(
+                    key = chip.chipId,
+                    visible = selectedChip != null,
+                    hole = cutoutSpec.holeSize,
+                    moons = chips.size > 1,
+                    onGone = {
+                        present = false
+                        leaving[0] = null
+                    },
+                    modifier =
+                        Modifier.pointerInput(chips.size) {
+                            detectHorizontalDragGestures(
+                                onDragStart = { dragged = 0f },
+                                onDragEnd = {
+                                    when {
+                                        dragged <= -slopPx -> selectRelative(1)
+                                        dragged >= slopPx -> selectRelative(-1)
+                                    }
+                                    dragged = 0f
+                                },
+                                onHorizontalDrag = { change, amount ->
+                                    dragged += amount
+                                    if (chips.size > 1) change.consume()
+                                },
+                            )
+                        },
+                ) {
+                    StatusBarDynamicIslandChip(
+                        viewModel = chip,
+                        pageCount = 1,
+                        cutoutSpec = cutoutSpec,
+                        onChipBoundsChanged = { bounds -> mainChipBounds = bounds },
+                        onTap = { if (chip.isPopupShown) chip.hidePopup() else chip.showPopup() },
+                        cos = true,
+                    )
+                }
+            }
+        } else if (selectedChip != null) Row(
             modifier =
                 Modifier.graphicsLayer {
                     scaleX = switchScaleAnim.value
@@ -351,6 +401,7 @@ fun StatusBarDynamicIslandContainer(
                 canPage = chips.size > 1,
                 pageDirection = lastDirection,
                 onPage = { direction -> selectRelative(direction) },
+                cos = cos,
             )
         }
     }

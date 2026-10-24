@@ -16,12 +16,13 @@
 
 package com.android.systemui.statusbar.quickactions.dynamicisland.media.ui.compose
 
+import com.android.systemui.penguin.CosFeature
+import com.android.systemui.penguin.rememberCosFeature
 import com.android.systemui.qs.composefragment.cosSeekGlow
-import android.content.Context
-import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.LayerDrawable
 import android.text.format.DateUtils
-import android.widget.SeekBar
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -52,6 +53,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
@@ -68,10 +72,9 @@ import com.android.systemui.common.shared.model.ContentDescription
 import com.android.systemui.common.shared.model.Icon as UiIcon
 import com.android.systemui.common.ui.compose.Icon as UiIconView
 import com.android.systemui.media.controls.shared.model.MediaAction
-import com.android.systemui.media.controls.ui.drawable.SquigglyProgress
 import com.android.systemui.media.controls.ui.view.WaveformSeekBar
-import com.android.systemui.res.R
 import com.android.systemui.statusbar.quickactions.dynamicisland.media.shared.model.MediaControlChipModel
+import com.android.systemui.statusbar.quickactions.popups.ui.compose.MediaArtFlip
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.PopupSurface
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.pressScale
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.rememberAlbumArtAccent
@@ -80,6 +83,7 @@ import kotlinx.coroutines.delay
 
 private val PopupShape = RoundedCornerShape(34.dp)
 private val ArtworkShape = RoundedCornerShape(16.dp)
+private val SeekHeight = 14.dp
 
 /** Expanded media controls for the centered dynamic island. */
 @Composable
@@ -88,6 +92,10 @@ fun MediaControlPopup(
     useWaveform: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    if (rememberCosFeature(CosFeature.Island)) {
+        CosMediaCard(model, modifier)
+        return
+    }
     val artworkDrawable =
         remember(model.artworkIcon) { (model.artworkIcon as? UiIcon.Loaded)?.drawable }
     val accent = rememberAlbumArtAccent(artworkDrawable, fallback = MaterialTheme.colorScheme.primary)
@@ -201,18 +209,20 @@ private fun MediaArtwork(model: MediaControlChipModel) {
                 resId = com.android.internal.R.drawable.ic_audio_media,
                 contentDescription = contentDescription,
             )
-    Box(
-        modifier =
-            Modifier.size(52.dp)
-                .clip(ArtworkShape)
-                .background(Color.White.copy(alpha = 0.08f)),
-        contentAlignment = Alignment.Center,
-    ) {
-        UiIconView(
-            icon = artwork,
-            modifier = Modifier.size(52.dp),
-            tint = Color.Unspecified,
-        )
+    MediaArtFlip(track = model.songName?.toString(), artwork = artwork) { shown ->
+        Box(
+            modifier =
+                Modifier.size(52.dp)
+                    .clip(ArtworkShape)
+                    .background(Color.White.copy(alpha = 0.08f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            UiIconView(
+                icon = shown,
+                modifier = Modifier.size(52.dp),
+                tint = Color.Unspecified,
+            )
+        }
     }
 }
 
@@ -254,7 +264,6 @@ private fun MediaProgressSection(
     }
 
     val accentArgb = accent.toArgb()
-    val trackAlphaArgb = accent.copy(alpha = 0.20f).toArgb()
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -270,7 +279,7 @@ private fun MediaProgressSection(
         Box(
             modifier =
                 Modifier.weight(1f)
-                    .height(28.dp)
+                    .height(if (useWaveform) 28.dp else SeekHeight)
                     .cosSeekGlow(
                         if (durationMs > 0) displayedPositionMs.toFloat() / durationMs else 0f,
                         isPlaying,
@@ -338,75 +347,21 @@ private fun MediaProgressSection(
                     },
                 )
             } else {
-                AndroidView(
-                    modifier = Modifier.fillMaxWidth().height(28.dp).then(gestureModifier),
-                    factory = { context ->
-                        SeekBar(context).apply {
-                            max = durationMs.toClampedInt()
-                            splitTrack = false
-                            setPadding(0, 0, 0, 0)
-                            isEnabled = false
-                            thumb = createSeekBarThumb(context, accentArgb)
-                            thumbOffset = thumb.intrinsicWidth / 2
-
-                            val layer = progressDrawable?.mutate() as? LayerDrawable
-                            if (layer != null) {
-                                layer.findDrawableByLayerId(android.R.id.background)
-                                    ?.mutate()?.setTint(trackAlphaArgb)
-                                layer.findDrawableByLayerId(android.R.id.secondaryProgress)
-                                    ?.mutate()?.setTint(
-                                        com.android.internal.graphics.ColorUtils
-                                            .setAlphaComponent(accentArgb, 60)
-                                    )
-                                val squiggle = SquigglyProgress().apply {
-                                    waveLength = context.resources.getDimensionPixelSize(
-                                        R.dimen.qs_media_seekbar_progress_wavelength
-                                    ).toFloat()
-                                    lineAmplitude = context.resources.getDimensionPixelSize(
-                                        R.dimen.qs_media_seekbar_progress_amplitude
-                                    ).toFloat()
-                                    phaseSpeed = context.resources.getDimensionPixelSize(
-                                        R.dimen.qs_media_seekbar_progress_phase
-                                    ).toFloat()
-                                    strokeWidth = context.resources.getDimensionPixelSize(
-                                        R.dimen.qs_media_seekbar_progress_stroke_width
-                                    ).toFloat()
-                                    setTint(accentArgb)
-                                    drawRemainingLine = false
-                                    transitionEnabled = true
-                                    animate = false
-                                }
-                                layer.setDrawableByLayerId(android.R.id.progress, squiggle)
-                                progressDrawable = layer
-                            }
-                        }
-                    },
-                    update = { seekBar ->
-                        seekBar.max = durationMs.toClampedInt().coerceAtLeast(1)
-                        seekBar.thumb?.alpha = if (canBeScrubbed) 255 else 120
-                        if (!isScrubbing) {
-                            seekBar.progress = displayedPositionMs.coerceIn(0L, durationMs).toClampedInt()
-                        }
-
-                        (seekBar.thumb as? GradientDrawable)?.setColor(accentArgb)
-
-                        val layer = seekBar.progressDrawable as? LayerDrawable
-                        layer?.findDrawableByLayerId(android.R.id.background)
-                            ?.setTint(trackAlphaArgb)
-                        layer?.findDrawableByLayerId(android.R.id.secondaryProgress)
-                            ?.setTint(
-                                com.android.internal.graphics.ColorUtils
-                                    .setAlphaComponent(accentArgb, 60)
-                            )
-                        val squiggle =
-                            layer?.findDrawableByLayerId(android.R.id.progress) as? SquigglyProgress
-                        squiggle?.apply {
-                            setTint(accentArgb)
-                            setAlpha(if (canBeScrubbed) 255 else 120)
-                            animate = isPlaying && canBeScrubbed && !isScrubbing
-                        }
-                    },
-                )
+                val fillColor = LocalContentColor.current
+                val trackColor = fillColor.copy(alpha = 0.15f)
+                val thickness by
+                    animateDpAsState(if (isScrubbing) 6.dp else 4.dp, tween(150), label = "seek")
+                Canvas(Modifier.fillMaxWidth().height(SeekHeight).then(gestureModifier)) {
+                    val fraction =
+                        if (durationMs > 0L) {
+                            (displayedPositionMs.toFloat() / durationMs).coerceIn(0f, 1f)
+                        } else 0f
+                    val h = thickness.toPx()
+                    val top = (size.height - h) / 2f
+                    val corner = CornerRadius(h / 2f)
+                    drawRoundRect(trackColor, Offset(0f, top), Size(size.width, h), corner)
+                    drawRoundRect(fillColor, Offset(0f, top), Size(size.width * fraction, h), corner)
+                }
             }
         }
 
@@ -460,22 +415,6 @@ private fun MediaActionButton(
             )
         }
     }
-}
-
-private fun createSeekBarThumb(context: Context, tintColor: Int): GradientDrawable {
-    return GradientDrawable().apply {
-        shape = GradientDrawable.RECTANGLE
-        cornerRadius = 999f
-        setColor(tintColor)
-        setSize(
-            (context.resources.displayMetrics.density * 4f).toInt().coerceAtLeast(1),
-            (context.resources.displayMetrics.density * 18f).toInt().coerceAtLeast(1),
-        )
-    }
-}
-
-private fun Long.toClampedInt(): Int {
-    return coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
 }
 
 private fun formatElapsedTime(milliseconds: Long): String {
