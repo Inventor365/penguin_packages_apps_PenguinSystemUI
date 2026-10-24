@@ -199,47 +199,50 @@ private fun ContentScope.MyUiQuickSettingsContent(
             .collect { interactable = it >= .5f }
     }
 
-    Column(
-        verticalArrangement = spacedBy(gap),
+    QsColumns(
+        gap = gap,
         modifier =
             modifier
                 .element(Elements.QuickSettingsContent)
                 .padding(horizontal = dimensionResource(id = R.dimen.qs_horizontal_margin))
                 .sysuiResTag("quick_settings_panel"),
-    ) {
-        MyUiHeaderRow(tiles = allTiles, interactable = interactable)
-        if (
-            viewModel.showMedia && viewModel.hasMediaCards && isAlwaysComposedContentVisible()
-        ) {
-            Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
-                MyUiMediaCard(
-                    viewModelFactory = viewModel.mediaViewModelFactory,
-                    behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
+        first = {
+            MyUiHeaderRow(tiles = allTiles, interactable = interactable)
+            if (
+                viewModel.showMedia && viewModel.hasMediaCards && isAlwaysComposedContentVisible()
+            ) {
+                Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
+                    MyUiMediaCard(
+                        viewModelFactory = viewModel.mediaViewModelFactory,
+                        behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
+                    )
+                }
+            }
+        },
+        second = {
+            var listening by remember { mutableStateOf(false) }
+            LifecycleStartEffect(Unit) {
+                listening = true
+                onStopOrDispose { listening = false }
+            }
+            Box {
+                GridAnchor()
+                MyUiTileGrid(
+                    tiles = gridTiles,
+                    columns = 4,
+                    gap = gap,
+                    modifier = Modifier.element(Elements.QuickSettingsTiles),
                 )
             }
-        }
-        var listening by remember { mutableStateOf(false) }
-        LifecycleStartEffect(Unit) {
-            listening = true
-            onStopOrDispose { listening = false }
-        }
-        Box {
-            GridAnchor()
-            MyUiTileGrid(
-                tiles = gridTiles,
-                columns = 4,
-                gap = gap,
-                modifier = Modifier.element(Elements.QuickSettingsTiles),
-            )
-        }
-        val editButtonViewModel =
-            rememberViewModel(traceName = "MyUiQuickSettings-editButton") {
-                viewModel.editModeButtonViewModelFactory.create()
+            val editButtonViewModel =
+                rememberViewModel(traceName = "MyUiQuickSettings-editButton") {
+                    viewModel.editModeButtonViewModelFactory.create()
+                }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                EditModeButton(viewModel = editButtonViewModel, isVisible = interactable)
             }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            EditModeButton(viewModel = editButtonViewModel, isVisible = interactable)
-        }
-    }
+        },
+    )
 }
 
 @Composable
@@ -257,45 +260,48 @@ private fun ContentScope.HarmonyQuickSettingsContent(
             .collect { interactable = it >= .5f }
     }
 
-    Column(
-        verticalArrangement = spacedBy(HarmonyGap),
+    QsColumns(
+        gap = HarmonyGap,
         modifier =
             modifier
                 .element(Elements.QuickSettingsContent)
                 .padding(horizontal = dimensionResource(id = R.dimen.qs_horizontal_margin))
                 .sysuiResTag("quick_settings_panel"),
-    ) {
-        HarmonyTitle()
-        HarmonyHeader(viewModel)
-        Box(Modifier.element(Elements.QuickSettingsTiles)) {
-            GridAnchor()
-            HarmonyTogglesCard(
-                tiles = toggles,
-                brightness = {
-                    Element(key = Elements.BrightnessSlider, modifier = Modifier) {
-                        Box(Modifier.thenIf(!interactable) { Modifier.gesturesDisabled() }) {
-                            BrightnessLayout(
-                                enable = interactable,
-                                horizontal = true,
-                                sliderHeight = LyingSliderHeight,
-                            )
+        first = {
+            HarmonyTitle()
+            HarmonyHeader(viewModel)
+        },
+        second = {
+            Box(Modifier.element(Elements.QuickSettingsTiles)) {
+                GridAnchor()
+                HarmonyTogglesCard(
+                    tiles = toggles,
+                    brightness = {
+                        Element(key = Elements.BrightnessSlider, modifier = Modifier) {
+                            Box(Modifier.thenIf(!interactable) { Modifier.gesturesDisabled() }) {
+                                BrightnessLayout(
+                                    enable = interactable,
+                                    horizontal = true,
+                                    sliderHeight = LyingSliderHeight,
+                                )
+                            }
                         }
-                    }
-                },
-            )
-        }
-        HarmonyCastCard(allTiles)
-        HarmonyConnectedDevices(allTiles)
-        if (contentKey != Overlays.QuickSettingsShade) {
-            val editButtonViewModel =
-                rememberViewModel(traceName = "HarmonyQuickSettings-editButton") {
-                    viewModel.editModeButtonViewModelFactory.create()
-                }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                EditModeButton(viewModel = editButtonViewModel, isVisible = interactable)
+                    },
+                )
             }
-        }
-    }
+            HarmonyCastCard(allTiles)
+            HarmonyConnectedDevices(allTiles)
+            if (contentKey != Overlays.QuickSettingsShade) {
+                val editButtonViewModel =
+                    rememberViewModel(traceName = "HarmonyQuickSettings-editButton") {
+                        viewModel.editModeButtonViewModelFactory.create()
+                    }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    EditModeButton(viewModel = editButtonViewModel, isVisible = interactable)
+                }
+            }
+        },
+    )
 }
 
 @Composable
@@ -395,15 +401,15 @@ private fun ContentScope.ColorOsQuickSettingsContent(
         LocalQsHostTransition provides transition,
         LocalGlassBlurAlpha provides { outerGlassAlpha() * glassFade.value },
     ) {
-        Column(
-            verticalArrangement = spacedBy(ColorOsGap),
+        QsColumns(
+            gap = ColorOsGap,
             modifier =
                 modifier
                     .element(Elements.QuickSettingsContent)
                     .padding(horizontal = dimensionResource(id = R.dimen.qs_horizontal_margin))
                     .sysuiResTag("quick_settings_panel"),
+            first = { ColorOsHeader(viewModel, interactable) },
         ) {
-            ColorOsHeader(viewModel, interactable)
             Box(Modifier.element(Elements.QuickSettingsTiles)) {
                 GridAnchor()
                 ColorOsTileGrid(gridTiles)

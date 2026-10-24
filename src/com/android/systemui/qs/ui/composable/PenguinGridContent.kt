@@ -267,8 +267,9 @@ internal fun rememberPenguinGridModel(viewModel: QuickSettingsContainerViewModel
 
 @Composable
 internal fun wideControlCentre(): Boolean =
-    LocalPenguinGridFlavor.current == PenguinGrid.Flavor.ControlCentre &&
-        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    LocalQsWide.current ||
+        LocalPenguinGridFlavor.current == PenguinGrid.Flavor.ControlCentre &&
+            LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
 @Composable
 internal fun wideGridWidth(): Dp {

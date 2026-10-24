@@ -16,16 +16,6 @@
 
 package com.android.systemui.qs.ui.composable
 
-import androidx.compose.foundation.layout.ColumnScope
-import com.android.systemui.penguin.CosShadeSwitch
-import com.android.systemui.qs.shared.style.panelStyle
-import androidx.compose.foundation.layout.Arrangement
-import com.android.systemui.qs.composefragment.BrightnessLayout
-import com.android.systemui.qs.shared.style.LocalGlassBlurAllowed
-import kotlinx.coroutines.flow.StateFlow
-import com.android.systemui.qs.shared.style.LocalGlassBlurAlpha
-import com.android.systemui.qs.composefragment.VolumeLayout
-import com.android.systemui.qs.shared.ui.QuickSettings
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -33,8 +23,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -50,16 +42,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -105,6 +97,9 @@ import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.media.remedia.ui.compose.Media
 import com.android.systemui.media.remedia.ui.compose.MediaPresentationStyle
 import com.android.systemui.notifications.ui.composable.SnoozableHeadsUpNotificationPlaceholder
+import com.android.systemui.penguin.CosShadeSwitch
+import com.android.systemui.qs.composefragment.BrightnessLayout
+import com.android.systemui.qs.composefragment.VolumeLayout
 import com.android.systemui.qs.composefragment.ui.GridAnchor
 import com.android.systemui.qs.flags.QsDetailedView
 import com.android.systemui.qs.panels.ui.compose.EditMode
@@ -112,8 +107,12 @@ import com.android.systemui.qs.panels.ui.compose.TileDetails
 import com.android.systemui.qs.panels.ui.compose.TileGrid
 import com.android.systemui.qs.panels.ui.compose.toolbar.Toolbar
 import com.android.systemui.qs.panels.ui.viewmodel.toolbar.ToolbarViewModel
-import com.android.systemui.qs.tiles.dialog.AudioDetailsViewModel
+import com.android.systemui.qs.shared.style.LocalGlassBlurAllowed
+import com.android.systemui.qs.shared.style.LocalGlassBlurAlpha
 import com.android.systemui.qs.shared.style.QsPanelStyle
+import com.android.systemui.qs.shared.style.panelStyle
+import com.android.systemui.qs.shared.ui.QuickSettings
+import com.android.systemui.qs.tiles.dialog.AudioDetailsViewModel
 import com.android.systemui.qs.ui.composable.QuickSettingsShade.systemGestureExclusionInShade
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsShadeOverlayActionsViewModel
@@ -127,6 +126,7 @@ import com.android.systemui.shade.ui.composable.OverlayShade
 import com.android.systemui.shade.ui.composable.OverlayShadeHeader
 import com.android.systemui.shade.ui.composable.QuickSettingsOverlayHeader
 import com.android.systemui.shade.ui.composable.QuickSettingsOverlayPrivacyChip
+import com.android.systemui.shade.ui.composable.isLandscapeSplitShade
 import com.android.systemui.statusbar.notification.stack.shared.model.ShadeScrimBounds
 import com.android.systemui.statusbar.notification.stack.shared.model.ShadeScrimShape
 import com.android.systemui.statusbar.notification.stack.ui.view.NotificationScrollView
@@ -138,14 +138,23 @@ import dagger.Lazy
 import javax.inject.Inject
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.Flow
-import com.android.systemui.qs.shared.style.LocalGlassBlurAllowed
+import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun ContentScope.StyledOverlayBody(
     qsContainerViewModel: QuickSettingsContainerViewModel,
     buildNumber: @Composable ColumnScope.() -> Unit,
 ) {
+    CompositionLocalProvider(LocalQsWide provides isLandscapeSplitShade()) {
+        StyledOverlayBodyContent(qsContainerViewModel, buildNumber)
+    }
+}
 
+@Composable
+private fun ContentScope.StyledOverlayBodyContent(
+    qsContainerViewModel: QuickSettingsContainerViewModel,
+    buildNumber: @Composable ColumnScope.() -> Unit,
+) {
     if (qsContainerViewModel.panelStyle == QsPanelStyle.Penguin) {
         Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
             PenguinGridQuickSettings(viewModel = qsContainerViewModel)
@@ -173,67 +182,71 @@ fun ContentScope.StyledOverlayBody(
                 qsContainerViewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
             }
 
-            Row(
+            QsColumns(
+                gap = dimensionResource(R.dimen.qs_tile_margin_vertical),
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
-                verticalAlignment = Alignment.Top,
-            ) {
-                Box(modifier = Modifier.weight(1f)) {
-                    if (showMedia) {
-                        Media(
-                            viewModelFactory = qsContainerViewModel.mediaViewModelFactory,
-                            presentationStyle = MediaPresentationStyle.Default,
-                            behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
-                            onDismissed = qsContainerViewModel::onMediaSwipeToDismiss,
-                            modifier = Modifier.fillMaxWidth(),
-                            location = Media.Location.QS,
-                        )
-                    } else {
-                        var listening by remember { mutableStateOf(false) }
-                        LifecycleStartEffect(Unit) {
-                            listening = true
-                            onStopOrDispose { listening = false }
+                first = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            if (showMedia) {
+                                Media(
+                                    viewModelFactory = qsContainerViewModel.mediaViewModelFactory,
+                                    presentationStyle = MediaPresentationStyle.Default,
+                                    behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
+                                    onDismissed = qsContainerViewModel::onMediaSwipeToDismiss,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    location = Media.Location.QS,
+                                )
+                            } else {
+                                var listening by remember { mutableStateOf(false) }
+                                LifecycleStartEffect(Unit) {
+                                    listening = true
+                                    onStopOrDispose { listening = false }
+                                }
+                                TileGrid(
+                                    viewModel = qsContainerViewModel.tileGridViewModel,
+                                    includeSpecs = top2Specs,
+                                    columnsOverride = 1,
+                                    forceLargeTiles = true,
+                                    listening = { listening },
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
                         }
-                        TileGrid(
-                            viewModel = qsContainerViewModel.tileGridViewModel,
-                            includeSpecs = top2Specs,
-                            columnsOverride = 1,
-                            forceLargeTiles = true,
-                            listening = { listening },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-                Box(modifier = Modifier.weight(1f)) {
-                    Element(key = QuickSettings.Elements.BrightnessSlider, modifier = Modifier) {
-                        val tileHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
-                        val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
-                        val headerHeight = tileHeight * 2 + tileSpacing
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(
-                                horizontalSpacing,
-                                Alignment.CenterHorizontally
-                            ),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            BrightnessLayout(enable = isIdle, sliderHeight = headerHeight)
-                            VolumeLayout(enable = isIdle, sliderHeight = headerHeight)
+                        Box(modifier = Modifier.weight(1f)) {
+                            Element(key = QuickSettings.Elements.BrightnessSlider, modifier = Modifier) {
+                                val tileHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
+                                val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
+                                val headerHeight = tileHeight * 2 + tileSpacing
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(
+                                        horizontalSpacing,
+                                        Alignment.CenterHorizontally
+                                    ),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    BrightnessLayout(enable = isIdle, sliderHeight = headerHeight)
+                                    VolumeLayout(enable = isIdle, sliderHeight = headerHeight)
+                                }
+                            }
                         }
                     }
-                }
-            }
 
-            VerticalSeparator(dimensionResource(R.dimen.qs_tile_margin_vertical))
-
-            val excludeSpecs = top2Specs
-
-            GridAnchor()
-            TileGrid(
-                viewModel = qsContainerViewModel.tileGridViewModel,
-                excludeSpecs = excludeSpecs,
-                modifier = Modifier.fillMaxWidth(),
-                enableRevealEffect = TileRevealFlag.isEnabled,
+                },
+                second = {
+                    GridAnchor()
+                    TileGrid(
+                        viewModel = qsContainerViewModel.tileGridViewModel,
+                        excludeSpecs = top2Specs,
+                        modifier = Modifier.fillMaxWidth(),
+                        enableRevealEffect = TileRevealFlag.isEnabled,
+                    )
+                },
             )
 
             buildNumber()
