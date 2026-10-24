@@ -58,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.coerceIn
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleStartEffect
@@ -70,6 +71,8 @@ import com.android.systemui.res.R
 internal val ColorOsGap = 18.dp
 private val ColorOsPillHeight = 68.dp
 private val ColorOsModuleHeight = 156.dp
+private val ColorOsMaxModuleHeight = 220.dp
+private const val ColorOsSliderAspect = 2.1f
 private val ColorOsTileSize = 70.dp
 private val ColorOsTileRowHeight = 105.dp
 private val ColorOsMediaCorner = 28.dp
@@ -136,7 +139,10 @@ fun ColorOsTopRows(
     ColorOsListen(listOfNotNull(wifi, bluetooth, sim))
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val half = (maxWidth - ColorOsGap) / 2
-        val sliderWidth = (half - ColorOsGap) / 2
+        val fit = (half - ColorOsGap) / 2
+        val moduleHeight =
+            (fit * ColorOsSliderAspect).coerceIn(ColorOsModuleHeight, ColorOsMaxModuleHeight)
+        val sliderWidth = minOf(fit, moduleHeight / ColorOsSliderAspect)
         Column(verticalArrangement = spacedBy(ColorOsGap)) {
             Row(Modifier.cosModuleReveal(1).fillMaxWidth().height(ColorOsPillHeight), spacedBy(ColorOsGap)) {
                 Box(Modifier.weight(1f).fillMaxHeight()) { wifi?.let { ColorOsConnectionPill(it) } }
@@ -144,9 +150,9 @@ fun ColorOsTopRows(
                     bluetooth?.let { ColorOsConnectionPill(it) }
                 }
             }
-            Row(Modifier.cosModuleReveal(2).fillMaxWidth().height(ColorOsModuleHeight), spacedBy(ColorOsGap)) {
+            Row(Modifier.cosModuleReveal(2).fillMaxWidth().height(moduleHeight), spacedBy(ColorOsGap)) {
                 Box(Modifier.weight(1f).fillMaxHeight()) { media?.invoke() ?: ColorOsIdleMedia() }
-                Box(Modifier.weight(1f).fillMaxHeight()) { sliders(sliderWidth, ColorOsModuleHeight) }
+                Box(Modifier.weight(1f).fillMaxHeight()) { sliders(sliderWidth, moduleHeight) }
             }
             Row(Modifier.cosModuleReveal(3).fillMaxWidth().height(ColorOsPillHeight), spacedBy(ColorOsGap)) {
                 ColorOsRingerPill(Modifier.weight(1f).fillMaxHeight())

@@ -452,7 +452,7 @@ fun ContentScope.ColorOsHeader(
                         Modifier.fillMaxWidth().thenIf(!interactable) {
                             Modifier.gesturesDisabled()
                         },
-                    horizontalArrangement = spacedBy(ColorOsGap),
+                    horizontalArrangement = spacedBy(ColorOsGap, Alignment.CenterHorizontally),
                 ) {
                     BrightnessLayout(
                         enable = interactable,
