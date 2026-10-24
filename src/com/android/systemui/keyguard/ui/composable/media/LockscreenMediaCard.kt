@@ -47,6 +47,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -94,10 +95,12 @@ import com.android.systemui.qs.composefragment.cosSeekGlow
 import com.android.systemui.qs.composefragment.cosStatusGlow
 import com.android.systemui.qs.composefragment.rememberCosMediaColor
 import com.android.systemui.qs.shared.style.LiquidGlassSurface
+import com.android.systemui.qs.shared.style.LocalGlassBlurAlpha
 import com.android.systemui.qs.shared.style.glassBackdropRegion
 import com.android.systemui.qs.shared.style.glassRim
 import com.android.systemui.qs.shared.style.liquidGlassEnabled
 import com.android.systemui.res.R
+import kotlin.math.min
 
 private val CardCorner = 28.dp
 private val CardPadding = 18.dp
@@ -164,6 +167,13 @@ private fun MediaCardBody(card: MediaCardViewModel, isSelected: Boolean) {
     val f = fraction()
     val glass = liquidGlassEnabled()
     val cos = rememberCosFeature(CosFeature.LockscreenMedia)
+    val blurAlpha = remember {
+        {
+            val state = LockscreenMediaExpansion
+            if (state.fraction > 0f || !state.mediaVisible) 0f
+            else min(state.lockscreenAlpha, state.cardAlpha)
+        }
+    }
     Expandable(
         controller = rememberExpandableController(color = Color.Transparent, shape = RoundedCornerShape(CardCorner)),
         useModifierBasedImplementation = true,
@@ -182,23 +192,25 @@ private fun MediaCardBody(card: MediaCardViewModel, isSelected: Boolean) {
             Box(Modifier.matchParentSize().glassBackdropRegion(CardCorner))
         } else {
             WallpaperBlur(
-                alpha = {
-                    if (LockscreenMediaExpansion.fraction > 0f) 0f
-                    else LockscreenMediaExpansion.lockscreenAlpha
-                },
+                alpha = blurAlpha,
                 corner = CardCorner,
                 modifier = Modifier.matchParentSize(),
             )
         }
-        Box(
-            Modifier.matchParentSize()
-                .background(
-                    if (immersive) Color.Transparent
-                    else lerpColor(if (glass) LiquidGlassSurface else CompactGlass, SmokyGlass, f)
-                )
-                .then(if (immersive) Modifier else Modifier.glassRim(RoundedCornerShape(CardCorner)))
-                .cosStatusGlow(card.title to card.subtitle, CardCorner)
-        )
+        CompositionLocalProvider(LocalGlassBlurAlpha provides blurAlpha) {
+            Box(
+                Modifier.matchParentSize()
+                    .background(
+                        if (immersive) Color.Transparent
+                        else lerpColor(if (glass) LiquidGlassSurface else CompactGlass, SmokyGlass, f)
+                    )
+                    .then(
+                        if (immersive) Modifier
+                        else Modifier.glassRim(RoundedCornerShape(CardCorner))
+                    )
+                    .cosStatusGlow(card.title to card.subtitle, CardCorner)
+            )
+        }
         Column(
             modifier =
                 Modifier.fillMaxWidth()

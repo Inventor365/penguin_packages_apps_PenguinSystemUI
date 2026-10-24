@@ -16,8 +16,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.pointerInput
@@ -61,8 +64,17 @@ class ExpandableLockscreenPlayer @Inject constructor() : LockscreenPlayer {
     }
 
     @Composable
-    override fun ExpandedArt(alpha: () -> Float, covered: () -> Float, unlocking: () -> Float) {
+    override fun ExpandedArt(
+        alpha: () -> Float,
+        covered: () -> Float,
+        unlocking: () -> Float,
+        cardAlpha: () -> Float,
+    ) {
         LockscreenExpandedMediaArt(alpha = alpha, covered = covered, unlocking = unlocking)
+        val latestCardAlpha by rememberUpdatedState(cardAlpha)
+        LaunchedEffect(Unit) {
+            snapshotFlow { latestCardAlpha() }.collect { LockscreenMediaExpansion.cardAlpha = it }
+        }
     }
 
     @Composable

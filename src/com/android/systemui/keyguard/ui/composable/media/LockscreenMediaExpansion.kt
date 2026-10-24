@@ -65,6 +65,8 @@ object LockscreenMediaExpansion {
 
     var lockscreenAlpha by mutableStateOf(1f)
 
+    var cardAlpha by mutableStateOf(1f)
+
     var artSlotBounds by mutableStateOf(Rect.Zero)
 
     var thumbnailBounds by mutableStateOf(Rect.Zero)
