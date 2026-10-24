@@ -16,12 +16,8 @@
 
 package com.android.systemui.statusbar.quickactions.popups.ui.compose
 
-import android.content.Context
-import android.graphics.Canvas
-import android.graphics.drawable.Drawable
-import android.graphics.drawable.GradientDrawable
-import android.view.View
-import android.view.ViewGroup
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.LocalContentColor
@@ -35,70 +31,56 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import com.android.axion.blur.AxBlurBackgroundRenderer
-import com.android.axion.blur.AxBlurColors
+import com.android.systemui.qs.shared.style.glassBlurRegion
+import com.android.systemui.qs.shared.style.liquidGlassRim
 import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.POPUP_COLOR_MODE_BLUR
+import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.POPUP_COLOR_MODE_DEFAULT
+import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.POPUP_COLOR_MODE_LIQUID_GLASS
 import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.POPUP_COLOR_MODE_SOLID_BLACK
 import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.observeDynamicIslandPopupColorMode
-import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.readDynamicIslandPopupColorMode
-
-private class PopupBlurHost(context: Context, private val cornerRadiusPx: Float) : View(context) {
-    private val blur = AxBlurBackgroundRenderer(this)
-    private val overlayColor = AxBlurColors.surfaceLightTint(context)
-
-    private val bgDrawable: GradientDrawable = GradientDrawable().also { d ->
-        d.setColor(0x00000000)
-        d.cornerRadius = cornerRadiusPx
-    }
-
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        blur.onAttachedToWindow()
-        (parent as? ViewGroup)?.layoutTransition = null
-    }
-
-    override fun onDetachedFromWindow() {
-        blur.onDetachedFromWindow()
-        super.onDetachedFromWindow()
-    }
-
-    override fun onVisibilityAggregated(isVisible: Boolean) {
-        super.onVisibilityAggregated(isVisible)
-        blur.onVisibilityAggregated(isVisible)
-    }
-
-    override fun verifyDrawable(who: Drawable): Boolean =
-        blur.verifyDrawable(who) || super.verifyDrawable(who)
-
-    override fun draw(canvas: Canvas) {
-        if (width > 0 && height > 0) {
-            bgDrawable.setBounds(0, 0, width, height)
-            if (!blur.drawBackgroundWithOverlayColor(canvas, bgDrawable, overlayColor)) {
-                bgDrawable.setColor(overlayColor and 0x00FFFFFF or (0xCC shl 24))
-                bgDrawable.draw(canvas)
-                bgDrawable.setColor(0x00000000)
-            }
-        }
-    }
-}
+import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.readEffectiveDynamicIslandPopupColorMode
 
 @Composable
 fun rememberPopupColorMode(): Int {
     val context = LocalContext.current
-    val initial = remember(context) { context.contentResolver.readDynamicIslandPopupColorMode() }
+    val initial = remember(context) { context.contentResolver.readEffectiveDynamicIslandPopupColorMode() }
     val flow = remember(context) { observeDynamicIslandPopupColorMode(context) }
     val mode by flow.collectAsState(initial = initial)
     return mode
 }
+
+fun Modifier.dynamicIslandPillSurface(
+    shape: Shape,
+    outlineColor: Color,
+    colorMode: Int,
+): Modifier =
+    when (colorMode) {
+        POPUP_COLOR_MODE_LIQUID_GLASS ->
+            this.clip(shape)
+                .background(
+                    Brush.verticalGradient(
+                        0f to Color(0xDF141720),
+                        0.45f to Color(0xEB0B0D12),
+                        1f to Color(0xF208090D),
+                    )
+                )
+                .liquidGlassRim(shape, strength = 0.72f)
+        POPUP_COLOR_MODE_BLUR ->
+            this.clip(shape)
+                .background(Color(0xEC121318))
+                .liquidGlassRim(shape, strength = 0.38f)
+        else ->
+            this.clip(shape)
+                .background(Color.Black)
+                .border(width = 1.dp, color = outlineColor, shape = shape)
+    }
 
 @Composable
 fun PopupSurface(
@@ -112,29 +94,50 @@ fun PopupSurface(
     val body: @Composable () -> Unit = {
         Box(Modifier.padding(top = cameraClearance)) { content() }
     }
-    val mode = if (cameraClearance > 0.dp) POPUP_COLOR_MODE_SOLID_BLACK else colorMode
-    when (mode) {
-        POPUP_COLOR_MODE_BLUR -> {
-            val density = LocalDensity.current
+    val effectiveMode =
+        if (colorMode == POPUP_COLOR_MODE_DEFAULT) rememberPopupColorMode() else colorMode
+
+    when (effectiveMode) {
+        POPUP_COLOR_MODE_LIQUID_GLASS -> {
+            val glassGradient = remember {
+                Brush.verticalGradient(
+                    0.0f to Color(0x5C1A1E28),
+                    0.35f to Color(0x6611141C),
+                    1.0f to Color(0x780C0E14),
+                )
+            }
             Box(
                 modifier = modifier
+                    .shadow(shadowElevation, shape, clip = false)
                     .clip(shape)
-                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen },
+                    .glassBlurRegion(shape)
+                    .background(glassGradient)
+                    .liquidGlassRim(shape, strength = 1.05f),
             ) {
-                AndroidView(
-                    factory = { ctx ->
-                        val radiusPx = with(density) { 32.dp.toPx() }
-                        PopupBlurHost(ctx, radiusPx).also {
-                            it.layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                            )
-                        }
-                    },
-                    modifier = Modifier.matchParentSize(),
-                )
                 CompositionLocalProvider(
-                    LocalContentColor provides MaterialTheme.colorScheme.onSurface
+                    LocalContentColor provides Color.White
+                ) {
+                    body()
+                }
+            }
+        }
+        POPUP_COLOR_MODE_BLUR -> {
+            val frostedGradient = remember {
+                Brush.verticalGradient(
+                    0.0f to Color(0x9422232B),
+                    1.0f to Color(0xA417181E),
+                )
+            }
+            Box(
+                modifier = modifier
+                    .shadow(shadowElevation, shape, clip = false)
+                    .clip(shape)
+                    .glassBlurRegion(shape)
+                    .background(frostedGradient)
+                    .liquidGlassRim(shape, strength = 0.45f),
+            ) {
+                CompositionLocalProvider(
+                    LocalContentColor provides Color.White
                 ) {
                     body()
                 }
@@ -146,7 +149,7 @@ fun PopupSurface(
                 contentColor = Color.White,
                 shape = shape,
                 shadowElevation = shadowElevation,
-                modifier = modifier,
+                modifier = modifier.liquidGlassRim(shape, strength = 0.22f),
             ) { body() }
         }
         else -> {

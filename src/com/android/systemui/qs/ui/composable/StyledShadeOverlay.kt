@@ -284,13 +284,20 @@ fun ContentScope.StyledOverlayHost(
                 val state = layoutState.transitionState
                 val transition = layoutState.currentTransition
                 val shown = contentKey == state.currentScene || contentKey in state.currentOverlays
-                launchFade *
-                    when {
-                        transition?.toContent == contentKey -> transition.progress
-                        transition?.fromContent == contentKey -> 1f - transition.progress
-                        shown -> 1f
-                        else -> 0f
+                val panelAlpha =
+                    if (contentKey == Overlays.QuickSettingsShade) {
+                        QuickSettingsShade.Elements.Panel.currentAlpha()
+                    } else {
+                        null
                     }
+                launchFade *
+                    (panelAlpha
+                        ?: when {
+                            transition?.toContent == contentKey -> transition.progress
+                            transition?.fromContent == contentKey -> 1f - transition.progress
+                            shown -> 1f
+                            else -> 0f
+                        })
             }
         }
     CompositionLocalProvider(

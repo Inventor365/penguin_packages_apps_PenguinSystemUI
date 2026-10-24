@@ -178,6 +178,7 @@ fun StatusBarDynamicIslandChip(
             .coerceAtLeast(56.dp)
 
     val collapseState = rememberDynamicIslandCollapseState(viewModel.isPopupShown)
+    val popupColorMode = rememberPopupColorMode()
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by
@@ -200,9 +201,7 @@ fun StatusBarDynamicIslandChip(
                     scaleX = collapseState.scaleX * pressScale
                     scaleY = collapseState.scaleY * pressScale
                 }
-                .clip(chipShape)
-                .background(Color.Black)
-                .border(width = 1.dp, color = chipOutline, shape = chipShape)
+                .dynamicIslandPillSurface(chipShape, chipOutline, popupColorMode)
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -316,6 +315,7 @@ private fun UtilityStatusIslandChip(
     modifier: Modifier = Modifier,
 ) {
     val collapseState = rememberDynamicIslandCollapseState(viewModel.isPopupShown)
+    val popupColorMode = rememberPopupColorMode()
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by
@@ -406,9 +406,7 @@ private fun UtilityStatusIslandChip(
                 .then(if (isSystemEvent) Modifier.semantics {
                     contentDescription = viewModel.contentDescription.orEmpty()
                 } else Modifier)
-                .clip(RoundedCornerShape(50))
-                .background(Color.Black)
-                .border(width = 1.dp, color = chipOutline, shape = RoundedCornerShape(50))
+                .dynamicIslandPillSurface(RoundedCornerShape(50), chipOutline, popupColorMode)
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -760,6 +758,7 @@ internal fun CompanionChip(
     onBoundsChanged: (Rect) -> Unit = {},
 ) {
     val colors = viewModel.colors
+    val popupColorMode = rememberPopupColorMode()
     val chipContentColor =
         colors.chipContent(isPopupShown = false, colorScheme = MaterialTheme.colorScheme)
     val chipOutline =
@@ -799,9 +798,7 @@ internal fun CompanionChip(
                 }
                 .size(diameter)
                 .onGloballyPositioned { onBoundsChanged(it.boundsInScreen(view)) }
-                .clip(CircleShape)
-                .background(Color.Black)
-                .border(width = 1.dp, color = chipOutline, shape = CircleShape)
+                .dynamicIslandPillSurface(CircleShape, chipOutline, popupColorMode)
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,

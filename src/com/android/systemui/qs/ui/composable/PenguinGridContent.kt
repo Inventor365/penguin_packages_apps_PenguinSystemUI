@@ -69,8 +69,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
@@ -492,7 +494,7 @@ private fun ExpandedSheet(
         Box(
             Modifier.fillMaxWidth()
                 .padding(horizontal = horizontalMargin)
-                .onGloballyPositioned { sheetBounds = it.boundsInRoot() }
+                .onPlaced { sheetBounds = it.boundsInRoot() }
                 .graphicsLayer {
                     val f = progress()
                     val from = PenguinGridOrigin.bounds
@@ -580,12 +582,14 @@ internal fun ContentScope.GridItemContent(
     preview: Boolean = false,
     height: Dp = penguinModuleHeight(item.h),
 ) {
-    var bounds by remember { mutableStateOf<Rect?>(null) }
-    val open = { PenguinGridOrigin.bounds = bounds }
+    val coordsRef = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    val open = {
+        PenguinGridOrigin.bounds = coordsRef[0]?.takeIf { it.isAttached }?.boundsInRoot()
+    }
     val expandRequest = LocalPenguinExpandRequest.current
     val oneUi = LocalPenguinGridFlavor.current == PenguinGrid.Flavor.OneUi
     val loose = LocalPenguinGridLoose.current
-    Box(modifier.onGloballyPositioned { bounds = it.boundsInRoot() }) {
+    Box(modifier.onPlaced { coordsRef[0] = it }) {
         when (item.spec) {
             PenguinGrid.ONEUI_TOGGLES_SPEC -> {
                 val tiles = viewModel.tileGridViewModel.tileViewModels

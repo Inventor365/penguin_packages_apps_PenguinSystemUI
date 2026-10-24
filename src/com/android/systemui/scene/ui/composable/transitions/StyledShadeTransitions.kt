@@ -52,13 +52,14 @@ fun TransitionBuilder.styledToQuickSettingsShadeTransition(
 fun TransitionBuilder.styledFromQuickSettingsShadeTransition(durationScale: Double = 1.0) {
     spec =
         spring(
-            dampingRatio = 1f,
-            stiffness = (800.0 / (durationScale * durationScale)).toFloat(),
-            visibilityThreshold = Spring.DefaultDisplacementThreshold,
+            dampingRatio = 0.95f,
+            stiffness = (520.0 / (durationScale * durationScale)).toFloat(),
+            visibilityThreshold = 0.001f,
         )
+    distance = FixedDistance(200.dp)
 
     fractionRange(end = .5f) { fade(QuickSettingsShade.Elements.Panel) }
-    scaleDraw(QuickSettingsShade.Elements.Panel, scaleX = 0.94f, scaleY = 0.94f)
+    scaleDraw(QuickSettingsShade.Elements.Panel, scaleX = 0.95f, scaleY = 0.95f)
     translate(QuickSettingsShade.Elements.Panel, y = (-24).dp)
 
     fractionRange(end = .5f) {
@@ -73,6 +74,7 @@ fun TransitionBuilder.styledToNotificationsShadeTransition(
     enableSharedElements: Boolean,
 ) {
     spec = overlayShadeSpring(durationScale)
+    distance = FixedDistance(220.dp)
 
     // Ensure the shared elements aren't clipped by the shade outline during the transition from
     // lockscreen.

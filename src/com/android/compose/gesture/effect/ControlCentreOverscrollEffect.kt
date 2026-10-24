@@ -52,23 +52,9 @@ data class ControlCentreOverscrollEffectFactory(private val animationScope: Coro
 
 class ControlCentreOverscrollEffect(animationScope: CoroutineScope) :
     BaseContentOverscrollEffect(animationScope, ReleaseSpring) {
-    private val shown = Animatable(0f)
 
     override val node: DelegatableNode =
         object : Modifier.Node(), LayoutModifierNode {
-            override fun onAttach() {
-                coroutineScope.launch {
-                    snapshotFlow { overscrollDistance }
-                        .collectLatest { target ->
-                            if (target != 0f) {
-                                shown.snapTo(target)
-                            } else {
-                                shown.animateTo(0f, ReleaseSpring)
-                            }
-                        }
-                }
-            }
-
             override fun MeasureScope.measure(
                 measurable: Measurable,
                 constraints: Constraints,
@@ -76,8 +62,8 @@ class ControlCentreOverscrollEffect(animationScope: CoroutineScope) :
                 val placeable = measurable.measure(constraints)
                 val maxDistancePx = MaxDistance.toPx()
                 return layout(placeable.width, placeable.height) {
-                    val distance = shown.value
-                    if (distance == 0f) {
+                    val distance = overscrollDistance
+                    if (distance == 0f || maxDistancePx <= 0f) {
                         placeable.place(0, 0)
                     } else {
                         val progress = Stretch.convert(distance / maxDistancePx)
@@ -96,9 +82,9 @@ class ControlCentreOverscrollEffect(animationScope: CoroutineScope) :
         val Stretch = ProgressConverter.tanh(maxProgress = 0.3f, tilt = 1f)
         val ReleaseSpring =
             spring(
-                dampingRatio = 0.7f,
-                stiffness = 322f,
-                visibilityThreshold = Spring.DefaultDisplacementThreshold,
+                dampingRatio = 0.85f,
+                stiffness = 380f,
+                visibilityThreshold = 0.5f,
             )
     }
 }
