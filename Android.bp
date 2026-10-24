@@ -50,6 +50,7 @@ android_app {
     ],
     static_libs: ["PenguinSystemUI-core"],
     resource_dirs: [],
+    asset_dirs: ["assets"],
     enable_ksp: true,
 
     use_resource_processor: true,

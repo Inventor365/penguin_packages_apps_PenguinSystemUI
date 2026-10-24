@@ -3,4 +3,7 @@
      Copyright (C) 2026 The PenguinOS Project
      SPDX-License-Identifier: Apache-2.0
 -->
-<resources />
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="cos_tile_tip_on"><xliff:g id="tile" example="Aeroplane mode">%1$s</xliff:g> on</string>
+    <string name="cos_tile_tip_off"><xliff:g id="tile" example="Aeroplane mode">%1$s</xliff:g> off</string>
+</resources>

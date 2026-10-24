@@ -53,7 +53,7 @@ fun CosGlassSlider(
     val iconSize = 26.dp
     val iconBottom = 18.dp
     val covered = fraction * height.value > iconBottom.value + iconSize.value / 2
-    Box(Modifier.size(width, height).cosGlass(shape)) {
+    Box(Modifier.size(width, height).cosStretch().cosGlass(shape)) {
         Box(
             Modifier.align(Alignment.BottomCenter)
                 .fillMaxWidth()
