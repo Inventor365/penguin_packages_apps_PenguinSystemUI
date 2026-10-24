@@ -27,9 +27,9 @@ enum class QsPanelStyle(val value: Int) {
 
     OneUi(4),
 
-    Stock(5),
+    ColorOs(5),
 
-    ColorOs(6);
+    Stock(6);
 
     /** Uses AOSP's own tiles and Quick Settings content rather than a Penguin layout. */
     val stockLayout: Boolean
