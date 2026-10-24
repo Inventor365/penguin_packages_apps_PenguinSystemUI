@@ -17,6 +17,7 @@
 package com.android.systemui.qs.ui.composable
 
 import androidx.compose.foundation.layout.ColumnScope
+import com.android.systemui.penguin.CosShadeSwitch
 import com.android.systemui.qs.shared.style.panelStyle
 import androidx.compose.foundation.layout.Arrangement
 import com.android.systemui.qs.composefragment.BrightnessLayout
@@ -286,6 +287,7 @@ fun ContentScope.StyledOverlayHost(
                 val shown = contentKey == state.currentScene || contentKey in state.currentOverlays
                 launchFade *
                     when {
+                        transition?.key == CosShadeSwitch -> 1f
                         transition?.toContent == contentKey -> transition.progress
                         transition?.fromContent == contentKey -> 1f - transition.progress
                         shown -> 1f

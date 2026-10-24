@@ -11,12 +11,14 @@ import com.android.compose.animation.scene.SceneTransitionsBuilder
 import com.android.compose.animation.scene.TransitionBuilder
 import com.android.compose.gesture.effect.rememberControlCentreOverscrollEffectFactory
 import com.android.systemui.penguin.CosFeature
+import com.android.systemui.penguin.CosShadeSwitch
 import com.android.systemui.penguin.ShadeMotion
 import com.android.systemui.penguin.rememberCosFeature
 import com.android.systemui.qs.composefragment.effectiveQsPanelStyle
 import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.scene.shared.model.Overlays
 import com.android.systemui.scene.ui.composable.transitions.cosFromQuickSettingsShadeTransition
+import com.android.systemui.scene.ui.composable.transitions.cosNotificationsToQuickSettingsSwitch
 import com.android.systemui.scene.ui.composable.transitions.cosSpring
 import com.android.systemui.scene.ui.composable.transitions.cosToQuickSettingsShadeTransition
 import com.android.systemui.scene.ui.composable.transitions.notificationsToQuickSettingsShadeTransition
@@ -73,6 +75,20 @@ class PenguinShadeMotion @Inject constructor() : ShadeMotion {
     }
 
     override fun SceneTransitionsBuilder.overlaySwitchTransitions() {
+        from(
+            Overlays.NotificationsShade,
+            to = Overlays.QuickSettingsShade,
+            key = CosShadeSwitch,
+        ) {
+            cosNotificationsToQuickSettingsSwitch()
+        }
+        from(
+            Overlays.QuickSettingsShade,
+            to = Overlays.NotificationsShade,
+            key = CosShadeSwitch,
+        ) {
+            reversed { cosNotificationsToQuickSettingsSwitch() }
+        }
         from(Overlays.NotificationsShade, to = Overlays.QuickSettingsShade) {
             notificationsToQuickSettingsShadeTransition()
         }
