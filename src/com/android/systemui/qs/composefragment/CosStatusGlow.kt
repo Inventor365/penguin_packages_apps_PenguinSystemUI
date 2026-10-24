@@ -50,7 +50,7 @@ fun Modifier.cosStatusGlow(
                     size.width.toInt(),
                     size.height.toInt(),
                     minOf(cornerRadius.toPx(), size.minDimension / 2),
-                    if (capsule) 1f else 2f,
+                    capsule,
                 )
             }
         }
