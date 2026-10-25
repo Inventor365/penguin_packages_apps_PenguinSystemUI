@@ -141,7 +141,8 @@ constructor(
 
     @Composable
     override fun FooterAction(viewModel: QuickSettingsContainerViewModel) {
-        if (viewModel.panelStyle != QsPanelStyle.Penguin) return
+        if (viewModel.panelStyle != QsPanelStyle.Penguin &&
+            viewModel.panelStyle != QsPanelStyle.ColorOs) return
         val editButton =
             rememberViewModel(traceName = "PenguinFooterEdit") {
                 viewModel.editModeButtonViewModelFactory.create()

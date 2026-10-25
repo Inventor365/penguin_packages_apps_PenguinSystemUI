@@ -97,8 +97,8 @@ private val ColorOsPillHeight = 68.dp
 private val ColorOsModuleHeight = 156.dp
 private val ColorOsMaxModuleHeight = 220.dp
 private const val ColorOsSliderAspect = 2.1f
-private val ColorOsTileSize = 70.dp
-private val ColorOsTileRowHeight = 105.dp
+internal val ColorOsTileSize = 70.dp
+internal val ColorOsTileRowHeight = 105.dp
 private val ColorOsMediaCorner = 28.dp
 private const val ColorOsColumns = 4
 private const val ColorOsRows = 3
@@ -109,7 +109,7 @@ private val ColorOsRed = Color(0xFFE5483D)
 private val ColorOsGreen = Color(0xFF21B04B)
 private val ColorOsInk = Color(0xFF1C1C1E)
 private val ColorOsActiveFill = Color(0xF2FFFFFF)
-private val ColorOsLabel = Color(0xE6FFFFFF)
+internal val ColorOsLabel = Color(0xE6FFFFFF)
 private val ColorOsSubLabel = Color(0x99FFFFFF)
 private val ColorOsPill = RoundedCornerShape(percent = 50)
 
@@ -117,8 +117,10 @@ private val ColorOsWifiSpecs = listOf("wifi", "internet")
 private const val ColorOsBluetoothSpec = "bt"
 private const val ColorOsSimSpec = "cell"
 
-fun colorOsCardSpecs(tiles: List<TileViewModel>): Set<String> {
-    val present = tiles.map { it.spec.spec }.toSet()
+fun colorOsCardSpecs(tiles: List<TileViewModel>): Set<String> =
+    colorOsCardSpecsOf(tiles.map { it.spec.spec }.toSet())
+
+fun colorOsCardSpecsOf(present: Set<String>): Set<String> {
     return buildSet {
         ColorOsWifiSpecs.firstOrNull { it in present }?.let(::add)
         if (ColorOsBluetoothSpec in present) add(ColorOsBluetoothSpec)
@@ -234,7 +236,7 @@ private fun ColorOsConnectionPill(tile: TileViewModel) {
 }
 
 @Composable
-private fun ColorOsCircle(
+internal fun ColorOsCircle(
     icon: Icon,
     active: Boolean,
     size: Dp,

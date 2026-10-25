@@ -99,6 +99,7 @@ import com.android.systemui.media.remedia.ui.compose.MediaPresentationStyle
 import com.android.systemui.notifications.ui.composable.SnoozableHeadsUpNotificationPlaceholder
 import com.android.systemui.penguin.CosShadeSwitch
 import com.android.systemui.qs.composefragment.BrightnessLayout
+import com.android.systemui.qs.composefragment.ColorOsEditor
 import com.android.systemui.qs.composefragment.VolumeLayout
 import com.android.systemui.qs.composefragment.ui.GridAnchor
 import com.android.systemui.qs.flags.QsDetailedView
@@ -269,6 +270,8 @@ fun ContentScope.StyledOverlayEditor(
             OneUiGridEditor(viewModel = containerViewModel, modifier = editorModifier)
         containerViewModel.panelStyle == QsPanelStyle.Penguin ->
             PenguinGridEditor(viewModel = containerViewModel, modifier = editorModifier)
+        containerViewModel.panelStyle == QsPanelStyle.ColorOs ->
+            ColorOsEditor(viewModel = containerViewModel, modifier = editorModifier)
         else -> return false
     }
     return true

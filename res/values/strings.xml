@@ -5,5 +5,8 @@
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="cos_tile_tip_on"><xliff:g id="tile" example="Aeroplane mode">%1$s</xliff:g> on</string>
+    <string name="cos_edit_title">Edit</string>
+    <string name="cos_edit_hint">Hold and drag to rearrange</string>
+    <string name="cos_edit_more">More tiles</string>
     <string name="cos_tile_tip_off"><xliff:g id="tile" example="Aeroplane mode">%1$s</xliff:g> off</string>
 </resources>
