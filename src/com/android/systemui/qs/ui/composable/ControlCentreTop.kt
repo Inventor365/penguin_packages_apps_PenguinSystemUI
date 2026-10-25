@@ -41,6 +41,7 @@ import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.qs.shared.style.glassBlurRegion
 import com.android.systemui.qs.shared.style.glassPress
 import com.android.systemui.qs.shared.style.liquidGlassEnabled
+import com.android.systemui.qs.shared.style.liquidGlassCosStyle
 import com.android.systemui.qs.shared.style.liquidGlassRim
 import com.android.systemui.qs.shared.style.panelStyle
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
@@ -114,6 +115,7 @@ private fun GlassButton(icon: ImageVector, cos: Boolean = false, onClick: (Expan
         Modifier.size(ButtonSize)
             .then(
                 if (cos) Modifier.cosGlass(CircleShape)
+                else if (liquidGlassCosStyle()) Modifier.glassBlurRegion(CircleShape)
                 else Modifier.glassBlurRegion(CircleShape).liquidGlassRim(CircleShape)
             )
             .glassPress()

@@ -37,6 +37,8 @@ import com.android.systemui.qs.shared.style.isStockQsStyle
 import com.android.systemui.qs.shared.style.liquidGlassEnabled
 import com.android.systemui.qs.shared.style.liquidGlassOn
 import com.android.systemui.qs.shared.style.liquidGlassPress
+import com.android.systemui.qs.shared.style.liquidGlassCos
+import com.android.systemui.qs.shared.style.liquidGlassCosStyle
 import com.android.systemui.qs.shared.style.liquidGlassRim
 import com.android.systemui.res.R
 
@@ -58,7 +60,7 @@ private class StyledQsTileStyle(
     @Composable
     override fun colors(uiState: TileUiState, iconOnly: Boolean, stock: TileColors): TileColors =
         when {
-            !this.stock -> StyledTileColors.getColorForState(uiState, iconOnly)
+            !this.stock -> StyledTileColors.getColorForState(uiState, iconOnly).onCosGlass(iconOnly)
             glass -> StyledTileColors.stockGlassColors(uiState, iconOnly, stock)
             else -> stock
         }
@@ -85,7 +87,8 @@ private class StyledQsTileStyle(
     @Composable
     override fun Container(shape: Shape, content: @Composable () -> Unit) {
         if (glass) {
-            Box(Modifier.glassBlurRegion(shape).liquidGlassRim(shape)) { content() }
+            val rim = if (liquidGlassCosStyle()) Modifier else Modifier.liquidGlassRim(shape)
+            Box(Modifier.glassBlurRegion(shape).then(rim)) { content() }
         } else {
             content()
         }
@@ -104,6 +107,18 @@ private class StyledQsTileStyle(
 }
 
 private const val TILE_SETTLE_MILLIS = 500L
+
+@Composable
+@ReadOnlyComposable
+private fun TileColors.onCosGlass(iconOnly: Boolean): TileColors =
+    if (!liquidGlassCos || isStockQsStyle) this
+    else
+        copy(
+            background = if (background == LiquidGlassSurface) Color.Transparent else background,
+            circleAroundIcon =
+                if (iconOnly && circleAroundIcon == LiquidGlassControl) Color.Transparent
+                else circleAroundIcon,
+        )
 
 private object StyledTileColors {
     private const val GlassSurfaceAlpha = 0.45f

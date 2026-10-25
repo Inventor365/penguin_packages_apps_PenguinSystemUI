@@ -182,7 +182,7 @@ constructor(
         val expansion = shadeInteractor.anyExpansion.collectAsState()
         val launching = shadeAnimationInteractor.isLaunchingActivity.collectAsState()
         val fade = remember(outer) {
-            { if (launching.value) 0f else outer() * expansion.value.coerceIn(0f, 1f) }
+            { if (launching.value) 0f else outer() * ((expansion.value - 0.5f) * 2f).coerceIn(0f, 1f) }
         }
         CompositionLocalProvider(LocalGlassBlurAlpha provides fade) { content() }
     }

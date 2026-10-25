@@ -21,6 +21,7 @@ import com.android.systemui.penguin.CosFeature
 import com.android.systemui.penguin.CosShadeSwitch
 import com.android.systemui.penguin.rememberCosFeature
 import com.android.systemui.qs.shared.style.LocalGlassBlurAlpha
+import com.android.systemui.qs.shared.style.liquidGlassCos
 import com.android.systemui.qs.shared.style.panelStyle
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import com.android.systemui.qs.composefragment.ColorOsGap
@@ -598,7 +599,8 @@ internal fun PanelElementPlaceholder(height: Dp, iconRes: Int, label: String) {
                 .height(height)
                 .clip(RoundedCornerShape(28.dp))
                 .background(
-                    if (liquidGlassOn) LiquidGlassSurface
+                    if (liquidGlassCos) Color.Transparent
+                    else if (liquidGlassOn) LiquidGlassSurface
                     else MaterialTheme.colorScheme.surfaceVariant
                 )
                 .glassRim(RoundedCornerShape(28.dp)),

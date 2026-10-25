@@ -85,6 +85,7 @@ import com.android.systemui.qs.shared.style.glassPress
 import com.android.systemui.qs.shared.style.glassRim
 import com.android.systemui.qs.shared.style.isStockQsStyle
 import com.android.systemui.qs.shared.style.liquidGlassActive
+import com.android.systemui.qs.shared.style.liquidGlassCos
 import com.android.systemui.qs.shared.style.liquidGlassOn
 import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.res.R
@@ -636,7 +637,8 @@ private fun FolderRow(tile: TileViewModel) {
 
 @Composable
 internal fun glassSurface(): Color =
-    if (liquidGlassOn && !isStockQsStyle) LiquidGlassSurface
+    if (liquidGlassCos && !isStockQsStyle) Color.Transparent
+    else if (liquidGlassOn && !isStockQsStyle) LiquidGlassSurface
     else
         LocalAndroidColorScheme.current.surfaceEffect1.copy(
             alpha = if (isStockQsStyle) 1f else GlassSurfaceAlpha

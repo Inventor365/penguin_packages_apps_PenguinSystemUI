@@ -385,7 +385,12 @@ private fun ContentScope.PenguinGridPages(
             remember(panelBlurAlpha) { { panelBlurAlpha() * (1f - progress.value) } }
         val arrival = LocalPenguinQsArrival.current
         val arrivingGlass =
-            remember(gridBlurAlpha, arrival) { { gridBlurAlpha() * arrival().coerceIn(0f, 1f) } }
+            remember(gridBlurAlpha, arrival) {
+                {
+                    val shown = Elements.QuickSettingsContent.currentAlpha() ?: 1f
+                    gridBlurAlpha() * minOf(arrival().coerceIn(0f, 1f), shown)
+                }
+            }
         CompositionLocalProvider(LocalGlassBlurAlpha provides gridBlurAlpha) {
         VerticalPager(
             state = pagerState,
