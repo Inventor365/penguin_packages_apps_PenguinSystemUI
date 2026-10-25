@@ -25,6 +25,7 @@ import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
 import android.os.UserHandle
+import android.os.Vibrator
 import android.provider.Settings
 import android.service.quicksettings.Tile
 import androidx.compose.animation.animateColorAsState
@@ -492,6 +493,9 @@ private fun OneUiMediaVolumeSlider(modifier: Modifier = Modifier) {
 @Composable
 fun OneUiSoundModeButton(size: Dp) {
     val (audioManager, audio) = rememberAudioState()
+    val context = LocalContext.current
+    val canVibrate =
+        remember(context) { context.getSystemService(Vibrator::class.java)?.hasVibrator() == true }
     val (glyph, active) =
         when (audio.ringerMode) {
             AudioManager.RINGER_MODE_VIBRATE -> Icons.Rounded.Vibration to true
@@ -506,7 +510,9 @@ fun OneUiSoundModeButton(size: Dp) {
                 .clickable {
                     audioManager.ringerModeInternal =
                         when (audio.ringerMode) {
-                            AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE
+                            AudioManager.RINGER_MODE_NORMAL ->
+                                if (canVibrate) AudioManager.RINGER_MODE_VIBRATE
+                                else AudioManager.RINGER_MODE_SILENT
                             AudioManager.RINGER_MODE_VIBRATE -> AudioManager.RINGER_MODE_SILENT
                             else -> AudioManager.RINGER_MODE_NORMAL
                         }

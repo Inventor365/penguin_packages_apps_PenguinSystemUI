@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
+import android.os.Vibrator
 import android.service.quicksettings.Tile
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -328,13 +329,19 @@ private fun ColorOsRingerPill(modifier: Modifier = Modifier) {
         audio.ringerModeInternal = value
         mode = value
     }
-    val selected = ColorOsRingerStages.indexOfFirst { it.mode == mode }.coerceAtLeast(0)
+    val canVibrate = remember(context) {
+        context.getSystemService(Vibrator::class.java)?.hasVibrator() == true
+    }
+    val stages = remember(canVibrate) {
+        ColorOsRingerStages.filter { canVibrate || it.mode != AudioManager.RINGER_MODE_VIBRATE }
+    }
+    val selected = stages.indexOfFirst { it.mode == mode }.coerceAtLeast(0)
     BoxWithConstraints(
         modifier = modifier.cosGlass(ColorOsPill).padding(horizontal = 10.dp),
         contentAlignment = Alignment.CenterStart,
     ) {
         val density = LocalDensity.current
-        val segmentPx = with(density) { maxWidth.toPx() } / ColorOsRingerStages.size
+        val segmentPx = with(density) { maxWidth.toPx() } / stages.size
         val indicatorPx = with(density) { ColorOsRingerIndicator.toPx() }
         val nudge = { index: Int -> colorOsRingerNudge(index, selected) * 0.1f * segmentPx }
         val indicatorX by
@@ -349,7 +356,7 @@ private fun ColorOsRingerPill(modifier: Modifier = Modifier) {
                 .background(ColorOsActiveFill, CircleShape)
         )
         Row(Modifier.fillMaxSize()) {
-            ColorOsRingerStages.forEachIndexed { index, stage ->
+            stages.forEachIndexed { index, stage ->
                 val shift by
                     animateFloatAsState(nudge(index), cosSpring(0f, 0.35f), label = "ringerNudge")
                 ColorOsRingerButton(

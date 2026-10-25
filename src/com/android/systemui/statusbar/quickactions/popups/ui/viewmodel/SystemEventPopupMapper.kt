@@ -7,6 +7,7 @@ import android.graphics.drawable.Drawable
 import android.media.AudioManager
 import android.os.BatteryManager
 import android.os.UserHandle
+import android.os.Vibrator
 import android.service.notification.StatusBarNotification
 import com.android.settingslib.fuelgauge.BatteryStatus
 import com.android.systemui.ActivityIntentHelper
@@ -40,6 +41,10 @@ class SystemEventPopupMapper @Inject constructor(
     private val lockscreenUserManager: NotificationLockscreenUserManager,
     private val keyguardStateController: KeyguardStateController,
 ) {
+    private val canVibrate by lazy {
+        context.getSystemService(Vibrator::class.java)?.hasVibrator() == true
+    }
+
     private fun loadAppIcon(sbn: StatusBarNotification): Drawable? = try {
         val appContext = if (sbn.user == UserHandle.ALL) context
             else context.createContextAsUser(sbn.user, 0)
@@ -201,7 +206,9 @@ class SystemEventPopupMapper @Inject constructor(
             is IslandEvent.RingerMode -> {
                 listOf(PenguinR.string.dynamic_island_event_ring to AudioManager.RINGER_MODE_NORMAL,
                     PenguinR.string.dynamic_island_event_vibrate to AudioManager.RINGER_MODE_VIBRATE,
-                    PenguinR.string.dynamic_island_event_silent to AudioManager.RINGER_MODE_SILENT).forEach { (label, mode) ->
+                    PenguinR.string.dynamic_island_event_silent to AudioManager.RINGER_MODE_SILENT)
+                    .filter { (_, mode) -> mode != AudioManager.RINGER_MODE_VIBRATE || canVibrate }
+                    .forEach { (label, mode) ->
                     actions += PopupActionModel(context.getString(label), { setRinger(mode) }, emphasized = mode == event.mode)
                 }
                 iconRes = when (event.mode) {

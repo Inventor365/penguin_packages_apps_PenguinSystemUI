@@ -176,6 +176,7 @@ fun LockscreenExpandedMediaArt(
                 artwork,
                 squareArt ?: tallArt,
                 Modifier.fillMaxSize().graphicsLayer { this.alpha = f },
+                cover,
             )
             return@Box
         }
