@@ -76,6 +76,7 @@ import com.android.systemui.common.shared.model.Icon
 import com.android.systemui.qs.panels.ui.compose.TileListener
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.SmallTileContent
 import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
+import com.android.systemui.qs.ui.composable.LocalQsWide
 import com.android.systemui.res.R
 import com.penguin.systemui.R as PenguinR
 import com.android.systemui.shade.ui.composable.CosTileTips
@@ -101,6 +102,7 @@ private val ColorOsTileRowHeight = 105.dp
 private val ColorOsMediaCorner = 28.dp
 private const val ColorOsColumns = 4
 private const val ColorOsRows = 3
+private val ColorOsGridHeadroom = 4.dp
 
 private val ColorOsBlue = Color(0xFF2F6BFF)
 private val ColorOsRed = Color(0xFFE5483D)
@@ -151,7 +153,7 @@ private fun ColorOsListen(tiles: List<TileViewModel>) {
 @Composable
 fun ColorOsTopRows(
     tiles: List<TileViewModel>,
-    media: (@Composable () -> Unit)?,
+    media: (@Composable (height: Dp) -> Unit)?,
     sliders: @Composable (width: Dp, height: Dp) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -174,7 +176,9 @@ fun ColorOsTopRows(
                 }
             }
             Row(Modifier.cosModuleReveal(2).cosSwitchRow().fillMaxWidth().height(moduleHeight), spacedBy(ColorOsGap)) {
-                Box(Modifier.weight(1f).fillMaxHeight()) { media?.invoke() ?: ColorOsIdleMedia() }
+                Box(Modifier.weight(1f).fillMaxHeight()) {
+                    media?.invoke(moduleHeight) ?: ColorOsIdleMedia()
+                }
                 Box(Modifier.weight(1f).fillMaxHeight()) { sliders(sliderWidth, moduleHeight) }
             }
             Row(Modifier.cosModuleReveal(3).cosSwitchRow().fillMaxWidth().height(ColorOsPillHeight), spacedBy(ColorOsGap)) {
@@ -480,17 +484,20 @@ fun ColorOsMediaFrame(content: @Composable () -> Unit) {
 @Composable
 fun ColorOsTileGrid(tiles: List<TileViewModel>, modifier: Modifier = Modifier) {
     ColorOsListen(tiles)
-    val pages = remember(tiles) { tiles.chunked(ColorOsColumns * ColorOsRows) }
+    val rows = if (LocalQsWide.current) 2 else ColorOsRows
+    val pages = remember(tiles, rows) { tiles.chunked(ColorOsColumns * rows) }
     if (pages.isEmpty()) return
     val pager = rememberPagerState { pages.size }
     Column(modifier.cosModuleReveal(4).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         HorizontalPager(
             state = pager,
             modifier =
-                Modifier.cosSwitchRow().fillMaxWidth().height(ColorOsTileRowHeight * ColorOsRows),
+                Modifier.cosSwitchRow()
+                    .fillMaxWidth()
+                    .height(ColorOsTileRowHeight * rows + ColorOsGridHeadroom),
             verticalAlignment = Alignment.Top,
         ) { page ->
-            Column(Modifier.fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth().padding(top = ColorOsGridHeadroom)) {
                 pages[page].chunked(ColorOsColumns).forEach { row ->
                     Row(Modifier.fillMaxWidth().height(ColorOsTileRowHeight)) {
                         row.forEach { ColorOsTile(it, Modifier.weight(1f)) }

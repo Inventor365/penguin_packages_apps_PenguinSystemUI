@@ -440,13 +440,14 @@ fun ContentScope.ColorOsHeader(
         tiles = viewModel.tileGridViewModel.tileViewModels,
         media =
             if (showMedia) {
-                {
+                { height ->
                     Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
                         ColorOsMediaFrame {
                             PenguinMediaCard(
                                 viewModelFactory = viewModel.mediaViewModelFactory,
                                 behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
                                 square = true,
+                                height = height,
                             )
                         }
                     }

@@ -156,17 +156,17 @@ private fun ContentScope.StyledOverlayBodyContent(
     buildNumber: @Composable ColumnScope.() -> Unit,
 ) {
     if (qsContainerViewModel.panelStyle == QsPanelStyle.Penguin) {
-        Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+        Column(modifier = Modifier.fillMaxWidth().bodyScroll()) {
             PenguinGridQuickSettings(viewModel = qsContainerViewModel)
             VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
         }
     } else if (qsContainerViewModel.panelStyle == QsPanelStyle.OneUi) {
-        Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+        Column(modifier = Modifier.fillMaxWidth().bodyScroll()) {
             OneUiGridQuickSettings(viewModel = qsContainerViewModel)
             VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
         }
     } else if (qsContainerViewModel.panelStyle != QsPanelStyle.Default) {
-        Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+        Column(modifier = Modifier.fillMaxWidth().bodyScroll()) {
             QuickSettingsContent(
                 viewModel = qsContainerViewModel,
                 mediaInRow = false,
@@ -174,7 +174,7 @@ private fun ContentScope.StyledOverlayBodyContent(
             VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
         }
     } else {
-        Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+        Column(modifier = Modifier.fillMaxWidth().bodyScroll()) {
             val isIdle = layoutState.transitionState is TransitionState.Idle
             val horizontalSpacing = dimensionResource(id = R.dimen.qs_tile_margin_horizontal)
             val showMedia = qsContainerViewModel.showMedia
@@ -322,3 +322,7 @@ fun ContentScope.StyledOverlayHost(
 private fun VerticalSeparator(height: Dp) {
     Spacer(Modifier.height(height = height))
 }
+
+@Composable
+private fun Modifier.bodyScroll(): Modifier =
+    if (LocalQsWide.current) this else verticalScroll(rememberScrollState())

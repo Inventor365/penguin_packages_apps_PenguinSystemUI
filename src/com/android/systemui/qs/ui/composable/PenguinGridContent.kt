@@ -79,6 +79,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import com.android.compose.animation.scene.ContentScope
+import com.android.compose.animation.scene.OverlayKey
 import com.android.systemui.scene.shared.model.Overlays
 import com.android.compose.animation.scene.ElementKey
 import com.android.compose.gesture.gesturesDisabled
@@ -306,12 +307,13 @@ private fun ContentScope.PenguinGridQuickSettingsContent(
     modifier: Modifier,
 ) {
     val model = rememberPenguinGridModel(viewModel)
-    val cell = if (wideControlCentre()) wideCell() else null
+    val wide = wideControlCentre() && contentKey is OverlayKey
+    val cell = if (wide) wideCell() else null
     CompositionLocalProvider(
         LocalPenguinGridLoose provides model.loose,
         LocalPenguinCell provides cell,
     ) {
-        PenguinGridPages(viewModel, model, modifier)
+        PenguinGridPages(viewModel, model, wide, modifier)
     }
 }
 
@@ -319,9 +321,9 @@ private fun ContentScope.PenguinGridQuickSettingsContent(
 private fun ContentScope.PenguinGridPages(
     viewModel: QuickSettingsContainerViewModel,
     model: PenguinGridModel,
+    wide: Boolean,
     modifier: Modifier,
 ) {
-    val wide = wideControlCentre()
     val combined = contentKey != Overlays.QuickSettingsShade
     val pages = remember(model.pages, wide, combined) {
         val shown =
