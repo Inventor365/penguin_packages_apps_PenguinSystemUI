@@ -64,32 +64,6 @@ object DynamicIslandFeatureSettings {
     const val POPUP_COLOR_MODE_DEFAULT = 0
     const val POPUP_COLOR_MODE_BLUR = 1
     const val POPUP_COLOR_MODE_SOLID_BLACK = 2
-    const val POPUP_COLOR_MODE_LIQUID_GLASS = 3
-    const val POPUP_COLOR_MODE_MATERIAL = 4
-
-    const val SYSTEM_BLUR_STYLE_KEY = "penguin_blur_style"
-    const val SYSTEM_LIQUID_GLASS_KEY = "penguin_liquid_glass"
-    const val BLUR_STYLE_STANDARD = 0
-    const val BLUR_STYLE_IOS_FROSTED = 1
-    const val BLUR_STYLE_LIQUID_GLASS = 2
-
-    fun ContentResolver.readSystemBlurStyle(): Int {
-        val lg =
-            Settings.Secure.getIntForUser(
-                this,
-                SYSTEM_LIQUID_GLASS_KEY,
-                0,
-                UserHandle.USER_CURRENT,
-            ) != 0
-        val style =
-            Settings.Secure.getIntForUser(
-                this,
-                SYSTEM_BLUR_STYLE_KEY,
-                if (lg) BLUR_STYLE_LIQUID_GLASS else BLUR_STYLE_IOS_FROSTED,
-                UserHandle.USER_CURRENT,
-            )
-        return if (lg) BLUR_STYLE_LIQUID_GLASS else style.coerceIn(0, 2)
-    }
 
     fun ContentResolver.readDynamicIslandPopupColorMode(): Int {
         return Settings.System.getIntForUser(
@@ -100,22 +74,12 @@ object DynamicIslandFeatureSettings {
         )
     }
 
-    fun ContentResolver.readEffectiveDynamicIslandPopupColorMode(): Int {
-        val raw = readDynamicIslandPopupColorMode()
-        if (raw != POPUP_COLOR_MODE_DEFAULT) return raw
-        return when (readSystemBlurStyle()) {
-            BLUR_STYLE_LIQUID_GLASS -> POPUP_COLOR_MODE_LIQUID_GLASS
-            BLUR_STYLE_IOS_FROSTED -> POPUP_COLOR_MODE_BLUR
-            else -> POPUP_COLOR_MODE_MATERIAL
-        }
-    }
-
     fun observeDynamicIslandPopupColorMode(context: Context): Flow<Int> =
         callbackFlow {
             val observer =
                 object : ContentObserver(Handler(Looper.getMainLooper())) {
                     override fun onChange(selfChange: Boolean) {
-                        trySend(context.contentResolver.readEffectiveDynamicIslandPopupColorMode())
+                        trySend(context.contentResolver.readDynamicIslandPopupColorMode())
                     }
                 }
             context.contentResolver.registerContentObserver(
@@ -124,19 +88,7 @@ object DynamicIslandFeatureSettings {
                 observer,
                 UserHandle.USER_ALL,
             )
-            context.contentResolver.registerContentObserver(
-                Settings.Secure.getUriFor(SYSTEM_BLUR_STYLE_KEY),
-                false,
-                observer,
-                UserHandle.USER_ALL,
-            )
-            context.contentResolver.registerContentObserver(
-                Settings.Secure.getUriFor(SYSTEM_LIQUID_GLASS_KEY),
-                false,
-                observer,
-                UserHandle.USER_ALL,
-            )
-            trySend(context.contentResolver.readEffectiveDynamicIslandPopupColorMode())
+            trySend(context.contentResolver.readDynamicIslandPopupColorMode())
             awaitClose { context.contentResolver.unregisterContentObserver(observer) }
         }
 

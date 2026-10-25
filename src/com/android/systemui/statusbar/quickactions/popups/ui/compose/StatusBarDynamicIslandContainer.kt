@@ -344,16 +344,11 @@ fun StatusBarDynamicIslandContainer(
         }
 
         popupAnchorChip?.let { anchoredChip ->
-            val activePopupChip = shownChip ?: anchoredChip
-            val currentPageIndex =
-                chips.indexOfFirst { it.chipId == activePopupChip.chipId }.coerceAtLeast(0)
             StatusBarPopup(
-                viewModel = activePopupChip,
+                viewModel = shownChip ?: anchoredChip,
                 isVisible = popupVisible,
                 chipBoundsInScreen = popupOriginBounds,
                 canPage = chips.size > 1,
-                pageIndex = currentPageIndex,
-                pageCount = chips.size,
                 pageDirection = lastDirection,
                 onPage = { direction -> selectRelative(direction) },
             )

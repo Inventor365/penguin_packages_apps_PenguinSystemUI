@@ -22,40 +22,38 @@ import androidx.compose.animation.core.spring
 import androidx.compose.ui.unit.dp
 import com.android.compose.animation.scene.Edge
 import com.android.compose.animation.scene.ElementKey
-import com.android.compose.animation.scene.FixedDistance
 import com.android.compose.animation.scene.TransitionBuilder
 import com.android.systemui.notifications.ui.composable.NotificationsShade
 import com.android.systemui.qs.ui.composable.QuickSettingsShade
 
 fun overlayShadeSpring(durationScale: Double = 1.0): SpringSpec<Float> =
     spring(
-        dampingRatio = 0.9f,
-        stiffness = (380.0 / (durationScale * durationScale)).toFloat(),
-        visibilityThreshold = 0.001f,
+        dampingRatio = 0.85f,
+        stiffness = (322.0 / (durationScale * durationScale)).toFloat(),
+        visibilityThreshold = Spring.DefaultDisplacementThreshold,
     )
 
 fun controlCentreSpring(durationScale: Double = 1.0): SpringSpec<Float> =
     spring(
-        dampingRatio = 0.92f,
-        stiffness = (380.0 / (durationScale * durationScale)).toFloat(),
-        visibilityThreshold = 0.001f,
+        dampingRatio = 1f,
+        stiffness = (322.0 / (durationScale * durationScale)).toFloat(),
+        visibilityThreshold = Spring.DefaultDisplacementThreshold,
     )
 
 fun TransitionBuilder.controlCentreReveal(panel: ElementKey) {
-    fractionRange(end = 0.35f) { fade(panel) }
-    scaleDraw(panel, scaleX = 0.95f, scaleY = 0.95f)
-    translate(panel, y = (-24).dp)
+    fractionRange(end = 0.2f) { fade(panel) }
+    scaleDraw(panel, scaleX = 1.06f, scaleY = 1.06f)
+    translate(panel, y = 30.dp)
 }
 
 fun TransitionBuilder.oxygenPanelReveal(panel: ElementKey) {
-    fractionRange(end = 0.45f) { fade(panel) }
-    scaleDraw(panel, scaleX = 0.94f, scaleY = 0.94f)
-    translate(panel, y = (-28).dp)
+    fractionRange(start = 0.1f) { fade(panel) }
+    scaleDraw(panel, scaleX = 0.9f, scaleY = 0.9f)
+    translate(panel, y = (-32).dp)
 }
 
 fun TransitionBuilder.notificationsToQuickSettingsShadeTransition() {
-    spec = spring(dampingRatio = 0.9f, stiffness = 320f, visibilityThreshold = 0.001f)
-    distance = FixedDistance(200.dp)
+    spec = spring(dampingRatio = 0.85f, stiffness = 250f)
 
     translate(NotificationsShade.Elements.Panel, Edge.Start)
     translate(QuickSettingsShade.Elements.Panel, Edge.End)
