@@ -486,12 +486,13 @@ fun ColorOsTileGrid(tiles: List<TileViewModel>, modifier: Modifier = Modifier) {
     Column(modifier.cosModuleReveal(4).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         HorizontalPager(
             state = pager,
-            modifier = Modifier.fillMaxWidth().height(ColorOsTileRowHeight * ColorOsRows),
+            modifier =
+                Modifier.cosSwitchRow().fillMaxWidth().height(ColorOsTileRowHeight * ColorOsRows),
             verticalAlignment = Alignment.Top,
         ) { page ->
             Column(Modifier.fillMaxWidth()) {
                 pages[page].chunked(ColorOsColumns).forEach { row ->
-                    Row(Modifier.cosSwitchRow().fillMaxWidth().height(ColorOsTileRowHeight)) {
+                    Row(Modifier.fillMaxWidth().height(ColorOsTileRowHeight)) {
                         row.forEach { ColorOsTile(it, Modifier.weight(1f)) }
                         repeat(ColorOsColumns - row.size) { Spacer(Modifier.weight(1f)) }
                     }
