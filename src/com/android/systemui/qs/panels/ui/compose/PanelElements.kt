@@ -19,6 +19,7 @@ package com.android.systemui.qs.panels.ui.compose
 import android.content.Context
 import com.android.systemui.penguin.LocalQsPanels
 import com.android.systemui.penguin.QsEditMode
+import com.android.systemui.qs.composefragment.ColorOsEditor
 import com.android.systemui.qs.composefragment.DEFAULT_SLIDERS_SPAN
 import com.android.systemui.qs.panels.shared.model.SizedTile
 import com.android.systemui.qs.panels.shared.model.SizedTileImpl
@@ -352,6 +353,10 @@ class StyledQsEditMode : QsEditMode {
             )
             return true
         }
+        if (panelStyle == QsPanelStyle.ColorOs) {
+            ColorOsEditor(viewModel, modifier)
+            return true
+        }
         if (panelStyle == QsPanelStyle.Penguin) {
             gridLayout.TileSizing { largeTiles, resize ->
                 PenguinEditMode(
@@ -443,7 +448,10 @@ class StyledQsEditMode : QsEditMode {
 
     @Composable
     private fun folderMemberSpecs(panelStyle: QsPanelStyle): List<String> =
-        if (!panelStyle.stockLayout && connectivityFolderEnabled()) {
+        // COS shows Wi-Fi and Bluetooth as pills and the other connectivity tiles in its grid,
+        // never in the connectivity folder, so its editor must list them all.
+        if (!panelStyle.stockLayout && panelStyle != QsPanelStyle.ColorOs &&
+            connectivityFolderEnabled()) {
             connectivityFolderSpecs()
         } else {
             emptyList()

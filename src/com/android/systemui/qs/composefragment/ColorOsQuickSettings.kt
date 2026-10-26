@@ -479,7 +479,17 @@ private fun ColorOsIdleMedia() {
 
 @Composable
 fun ColorOsMediaFrame(content: @Composable () -> Unit) {
-    Box(Modifier.fillMaxSize().clip(RoundedCornerShape(ColorOsMediaCorner))) { content() }
+    // The COS panel is dark glass in both themes, like its white tile labels, so the media
+    // card's title, artist and controls are light on it rather than the light theme's dark ink.
+    val scheme = androidx.compose.material3.MaterialTheme.colorScheme
+    androidx.compose.material3.MaterialTheme(
+        colorScheme =
+            scheme.copy(onSurface = ColorOsLabel, onSurfaceVariant = ColorOsSubLabel),
+        typography = androidx.compose.material3.MaterialTheme.typography,
+        shapes = androidx.compose.material3.MaterialTheme.shapes,
+    ) {
+        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(ColorOsMediaCorner))) { content() }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)

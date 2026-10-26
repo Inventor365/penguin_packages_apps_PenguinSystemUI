@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.compose.animation.core.animateIntOffsetAsState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.android.systemui.qs.panels.ui.viewmodel.EditModeViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.EditTileViewModel
 import com.android.systemui.qs.pipeline.shared.TileSpec
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
@@ -77,8 +78,15 @@ private val EditorCellMin = 88.dp
 private val EditorBadgeFill = Color(0xFF5B5B60)
 
 @Composable
-fun ColorOsEditor(viewModel: QuickSettingsContainerViewModel, modifier: Modifier = Modifier) {
-    val editViewModel = viewModel.editModeViewModel
+fun ColorOsEditor(viewModel: QuickSettingsContainerViewModel, modifier: Modifier = Modifier) =
+    ColorOsEditor(viewModel.editModeViewModel, modifier)
+
+/**
+ * The COS editor on its own edit model, so every shade that edits tiles (the phone overlay and
+ * the large-screen shade's edit grid alike) shows the same COS editor.
+ */
+@Composable
+fun ColorOsEditor(editViewModel: EditModeViewModel, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     BackHandler { editViewModel.stopEditing() }
 

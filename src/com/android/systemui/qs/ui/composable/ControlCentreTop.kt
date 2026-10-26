@@ -105,7 +105,11 @@ fun ContentScope.ControlCentreTop(
             }
         }
         Spacer(Modifier.height(20.dp))
-        ShadeStatusRow(viewModel.shadeHeaderViewModel, Modifier.padding(horizontal = 4.dp))
+        ShadeStatusRow(
+            viewModel.shadeHeaderViewModel,
+            Modifier.padding(horizontal = 4.dp),
+            onDarkGlass = colorOs,
+        )
     }
 }
 
