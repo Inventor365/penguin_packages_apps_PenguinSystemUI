@@ -35,6 +35,8 @@ import com.android.systemui.penguin.StatusBarIsland
 import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.KeyguardStatusBarView
 import com.android.systemui.statusbar.phone.StatusIconContainer
+import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings
+import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.readDynamicIslandFeatureEnabled
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.StatusBarDynamicIslandContainer
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.dynamicIslandAvoidsAppHandles
 import com.android.systemui.statusbar.quickactions.popups.ui.viewmodel.DynamicIslandChipsViewModelStore
@@ -275,10 +277,9 @@ constructor(
         }
 
         fun isDynamicIslandSettingEnabled(context: Context): Boolean =
-            Settings.System.getInt(
-                context.contentResolver,
+            context.contentResolver.readDynamicIslandFeatureEnabled(
                 Settings.System.STATUS_BAR_SHOW_DYNAMIC_ISLAND,
-                0,
-            ) != 0
+                DynamicIslandFeatureSettings.ENABLED_DEFAULT,
+            )
     }
 }

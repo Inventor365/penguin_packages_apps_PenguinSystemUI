@@ -220,13 +220,16 @@ fun StatusBarDynamicIslandChip(
                 .then(boundsModifier)
                 .then(
                     if (cos) {
-                        Modifier.height(CosIsland.height(cutoutSpec.holeSize))
-                            .widthIn(min = CosIsland.MinWidth, max = CosIsland.MaxWidth)
+                        Modifier.height(CosIsland.height(cutoutSpec.holeSize) * heightScale)
+                            .widthIn(
+                                min = CosIsland.MinWidth * widthScale,
+                                max = CosIsland.MaxWidth * widthScale,
+                            )
                             .background(cosArtTint)
                     } else {
-                        Modifier.defaultMinSize(minHeight = 32.dp * heightScale)
+                        Modifier.defaultMinSize(minHeight = IslandBaseHeight * heightScale)
                             .widthIn(
-                                min = compactWidth ?: 0.dp,
+                                min = compactWidth ?: (CompactIslandMinWidth * widthScale),
                                 max = compactWidth ?: (CompactIslandMaxWidth * widthScale),
                             )
                             .graphicsLayer {
@@ -249,17 +252,15 @@ fun StatusBarDynamicIslandChip(
                     if (cos) {
                         Modifier.padding(horizontal = CosIsland.Padding)
                     } else {
-                        Modifier.padding(
-                                start = 8.dp * widthScale,
-                                end = 12.dp * widthScale,
-                                top = 7.dp * heightScale,
-                                bottom = 7.dp * heightScale,
-                            )
+                        // No vertical padding: the content is centred in the minimum height, so
+                        // that height alone sets how tall the island is.
+                        Modifier.padding(start = 8.dp * widthScale, end = 12.dp * widthScale)
                             .graphicsLayer { alpha = collapseState.contentAlpha }
                     }
                 ),
         horizontalArrangement =
-            if (isMediaChip) Arrangement.SpaceBetween else Arrangement.spacedBy(8.dp),
+            if (isMediaChip) Arrangement.SpaceBetween
+            else Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         viewModel.icons.forEachIndexed { index, chipIcon ->
@@ -478,7 +479,7 @@ private fun UtilityStatusIslandChip(
                     scaleX = collapseState.scaleX * pressScale
                     scaleY = collapseState.scaleY * pressScale
                 }
-                .defaultMinSize(minHeight = 32.dp * heightScale)
+                .defaultMinSize(minHeight = IslandBaseHeight * heightScale)
                 .then(
                     if (isFlashlight) {
                         Modifier.width(IntrinsicSize.Max)
@@ -537,12 +538,7 @@ private fun UtilityStatusIslandChip(
         Box(
             modifier =
                 (if (isFlashlight) Modifier.weight(1f) else Modifier.width(rightSegmentWidth))
-                    .padding(
-                        start = 6.dp * widthScale,
-                        top = 7.dp * heightScale,
-                        bottom = 7.dp * heightScale,
-                        end = textEndPadding,
-                    ),
+                    .padding(start = 6.dp * widthScale, end = textEndPadding),
             contentAlignment = Alignment.CenterEnd,
         ) {
             Row(
@@ -705,6 +701,13 @@ private fun CameraSplitRow(
 
 private val CameraSplitSpacing = 8.dp
 
+/**
+ * Height of a collapsed island at 100%, before the height setting scales it. The status bar caps
+ * it, so on a short status bar the larger settings all end up at the status bar's own height.
+ */
+private val IslandBaseHeight = 34.dp
+/** Narrowest a text island gets at 100%, so the width setting also changes islands sized by text. */
+private val CompactIslandMinWidth = 72.dp
 private val CompactIslandMaxWidth = 192.dp
 private val CompactMediaIslandWidth = 108.dp
 private val CompactTimerIslandWidth = 116.dp

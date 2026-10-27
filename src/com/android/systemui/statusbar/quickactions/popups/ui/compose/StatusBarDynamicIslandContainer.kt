@@ -101,7 +101,7 @@ fun StatusBarDynamicIslandContainer(
             animationSpec = tween(300, easing = FastOutSlowInEasing),
             label = "islandAppHandleShift",
         )
-    val (_, heightScale) = rememberDynamicIslandSizeScale()
+    val (widthScale, heightScale) = rememberDynamicIslandSizeScale()
     val cos = rememberCosFeature(CosFeature.Island)
     var selectedChipId by remember { mutableStateOf<PopupChipId?>(null) }
     var popupAnchorChip by remember { mutableStateOf<PopupChipModel.Shown?>(null) }
@@ -252,6 +252,8 @@ fun StatusBarDynamicIslandContainer(
                         present = false
                         leaving[0] = null
                     },
+                    widthScale = widthScale,
+                    heightScale = heightScale,
                     modifier =
                         Modifier.pointerInput(chips.size) {
                             detectHorizontalDragGestures(
