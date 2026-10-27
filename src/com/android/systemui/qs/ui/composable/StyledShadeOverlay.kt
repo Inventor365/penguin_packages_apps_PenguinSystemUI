@@ -143,6 +143,7 @@ import com.android.systemui.volume.panel.component.volume.ui.composable.VolumeSl
 import dagger.Lazy
 import javax.inject.Inject
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -289,9 +290,20 @@ fun ContentScope.StyledOverlayHost(
     content: @Composable () -> Unit,
 ) {
     val launching by launchingActivity.collectAsStateWithLifecycle()
+    // The shade is removed a frame after the launch ends, so keep the content faded out a little
+    // past the end instead of fading it back in over the app that just opened.
+    var launchSuppressed by remember { mutableStateOf(false) }
+    LaunchedEffect(launching) {
+        if (launching) {
+            launchSuppressed = true
+        } else if (launchSuppressed) {
+            delay(LAUNCH_END_HOLD_MS)
+            launchSuppressed = false
+        }
+    }
     val launchFade by
         animateFloatAsState(
-            if (launching) 0f else 1f,
+            if (launchSuppressed) 0f else 1f,
             animationSpec = tween(durationMillis = 120),
             label = "Launch fade",
         )
@@ -347,3 +359,6 @@ private fun Modifier.bodyScroll(): Modifier {
         layout(width, height) { placeable.place(0, -offset) }
     }
 }
+
+// Matches the COS shade glass: the shade goes away a frame after an app launch ends.
+private const val LAUNCH_END_HOLD_MS = 300L
