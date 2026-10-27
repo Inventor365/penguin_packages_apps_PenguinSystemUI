@@ -63,6 +63,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onLayoutRectChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
@@ -71,8 +72,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.constrainHeight
+import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -123,6 +127,7 @@ import com.android.systemui.scene.shared.model.Overlays
 import com.android.systemui.scene.ui.composable.LocalSceneContainerPreloadedResources
 import com.android.systemui.scene.ui.composable.Overlay
 import com.android.systemui.shade.ui.composable.ChipHighlightModel
+import com.android.systemui.shade.ui.composable.LocalCosSwitchMotion
 import com.android.systemui.shade.ui.composable.OverlayShade
 import com.android.systemui.shade.ui.composable.OverlayShadeHeader
 import com.android.systemui.shade.ui.composable.QuickSettingsOverlayHeader
@@ -327,5 +332,18 @@ private fun VerticalSeparator(height: Dp) {
 }
 
 @Composable
-private fun Modifier.bodyScroll(): Modifier =
-    if (LocalQsWide.current) this else verticalScroll(rememberScrollState())
+private fun Modifier.bodyScroll(): Modifier {
+    if (LocalQsWide.current) return this
+    val scroll = rememberScrollState()
+    // A vertical scroller also clips sideways, which cuts the COS rows that trail the panel while
+    // it switches to notifications. Nothing scrolls during the switch, so lay the body out at the
+    // same scroll position without the scroller (and its clip) until the switch ends.
+    if (LocalCosSwitchMotion.current?.active != true) return verticalScroll(scroll)
+    return layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints.copy(maxHeight = Constraints.Infinity))
+        val width = constraints.constrainWidth(placeable.width)
+        val height = constraints.constrainHeight(placeable.height)
+        val offset = scroll.value.coerceIn(0, (placeable.height - height).coerceAtLeast(0))
+        layout(width, height) { placeable.place(0, -offset) }
+    }
+}
