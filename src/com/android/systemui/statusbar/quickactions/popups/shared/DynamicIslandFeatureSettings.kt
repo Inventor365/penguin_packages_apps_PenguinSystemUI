@@ -56,6 +56,12 @@ object DynamicIslandFeatureSettings {
     const val POPUP_COLOR_MODE = "status_bar_dynamic_island_popup_color_mode"
     const val LOCKSCREEN = "status_bar_dynamic_island_lockscreen"
 
+    /**
+     * Whether the island is on when [Settings.System.STATUS_BAR_SHOW_DYNAMIC_ISLAND] was never
+     * written. Matches the switch in Settings, so every reader agrees until the user changes it.
+     */
+    const val ENABLED_DEFAULT = true
+
     const val SCALE_MIN = 0.7f
     const val SCALE_MAX = 1.4f
     private const val SCALE_DEFAULT = 1.0f
