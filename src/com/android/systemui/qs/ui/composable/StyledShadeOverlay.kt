@@ -101,8 +101,10 @@ import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.media.remedia.ui.compose.Media
 import com.android.systemui.media.remedia.ui.compose.MediaPresentationStyle
 import com.android.systemui.notifications.ui.composable.SnoozableHeadsUpNotificationPlaceholder
+import com.android.systemui.penguin.CosFeature
 import com.android.systemui.penguin.CosShadeSwitch
 import com.android.systemui.penguin.panelSwitchAlpha
+import com.android.systemui.penguin.rememberCosFeature
 import com.android.systemui.qs.composefragment.BrightnessLayout
 import com.android.systemui.qs.composefragment.ColorOsEditor
 import com.android.systemui.qs.composefragment.VolumeLayout
@@ -129,12 +131,12 @@ import com.android.systemui.scene.ui.composable.LocalSceneContainerPreloadedReso
 import com.android.systemui.scene.ui.composable.Overlay
 import com.android.systemui.shade.ui.composable.ChipHighlightModel
 import com.android.systemui.shade.ui.composable.LocalCosSwitchMotion
-import com.android.systemui.shade.ui.composable.isTabletPanelSwitch
 import com.android.systemui.shade.ui.composable.OverlayShade
 import com.android.systemui.shade.ui.composable.OverlayShadeHeader
 import com.android.systemui.shade.ui.composable.QuickSettingsOverlayHeader
 import com.android.systemui.shade.ui.composable.QuickSettingsOverlayPrivacyChip
 import com.android.systemui.shade.ui.composable.isLandscapeSplitShade
+import com.android.systemui.shade.ui.composable.isTabletPanelSwitch
 import com.android.systemui.statusbar.notification.stack.shared.model.ShadeScrimBounds
 import com.android.systemui.statusbar.notification.stack.shared.model.ShadeScrimShape
 import com.android.systemui.statusbar.notification.stack.ui.view.NotificationScrollView
@@ -336,12 +338,18 @@ fun ContentScope.StyledOverlayHost(
                     }
             }
         }
+    // The COS shade puts dark glass behind every panel in both themes, so draw the other styles
+    // with the dark palette there, like the COS panel and the Penguin grid; light-theme colours
+    // leave their text dark, wallpaper-tinted and hard to read on it.
+    val darkGlass =
+        rememberCosFeature(CosFeature.Shade) &&
+            containerViewModel.panelStyle != QsPanelStyle.ColorOs
     CompositionLocalProvider(
         LocalGlassBlurAllowed provides allowed,
         LocalGlassBlurAlpha provides fade,
     ) {
         Box(Modifier.graphicsLayer { alpha = launchFade }, propagateMinConstraints = true) {
-            content()
+            if (darkGlass) PenguinGridTheme(content) else content()
         }
     }
 }

@@ -26,10 +26,23 @@ fun cosSpring(response: Double, durationScale: Double): SpringSpec<Float> =
         visibilityThreshold = Spring.DefaultDisplacementThreshold,
     )
 
-fun TransitionBuilder.cosToQuickSettingsShadeTransition(durationScale: Double = 1.0) {
+fun TransitionBuilder.cosToQuickSettingsShadeTransition(
+    durationScale: Double = 1.0,
+    fadePanel: Boolean = false,
+) {
     spec = cosSpring(COS_PANEL_RESPONSE, durationScale)
 
     fractionRange(end = .86f) { translate(QuickSettingsShade.Elements.Panel, y = -CosPanelDrop) }
+    // The COS panel reveals its own modules; other panels fade and grow in as they drop instead
+    // of appearing at once.
+    if (fadePanel) {
+        fractionRange(end = PANEL_REVEAL_FADE_END) { fade(QuickSettingsShade.Elements.Panel) }
+        scaleDraw(
+            QuickSettingsShade.Elements.Panel,
+            scaleX = PANEL_FADE_SCALE,
+            scaleY = PANEL_FADE_SCALE,
+        )
+    }
     fractionRange(end = .33f) { fade(OverlayShade.Elements.Scrim) }
     fractionRange(start = .5f) {
         fade(QuickSettingsShade.Elements.StatusBar)
@@ -37,10 +50,24 @@ fun TransitionBuilder.cosToQuickSettingsShadeTransition(durationScale: Double = 
     }
 }
 
-fun TransitionBuilder.cosFromQuickSettingsShadeTransition(durationScale: Double = 1.0) {
-    spec = cosSpring(COS_PANEL_RESPONSE, durationScale)
+fun TransitionBuilder.cosFromQuickSettingsShadeTransition(
+    durationScale: Double = 1.0,
+    fadePanel: Boolean = false,
+) {
+    // The COS panel hides its own modules; other panels would otherwise stay opaque until the
+    // shade is removed and vanish at once. They rise, shrink a little and fade out with their glass
+    // across the whole dismiss instead, on a softer spring.
+    spec = cosSpring(if (fadePanel) PANEL_FADE_RESPONSE else COS_PANEL_RESPONSE, durationScale)
 
     translate(QuickSettingsShade.Elements.Panel, y = -CosPanelDrop)
+    if (fadePanel) {
+        scaleDraw(
+            QuickSettingsShade.Elements.Panel,
+            scaleX = PANEL_FADE_SCALE,
+            scaleY = PANEL_FADE_SCALE,
+        )
+        fade(QuickSettingsShade.Elements.Panel)
+    }
     fractionRange(end = .5f) {
         fade(QuickSettingsShade.Elements.StatusBar)
         fade(QuickSettingsShade.Elements.Header)
@@ -82,6 +109,9 @@ fun TransitionBuilder.cosPanelSwitchFade(
 }
 
 private const val COS_PANEL_RESPONSE = 0.314
+private const val PANEL_FADE_RESPONSE = 0.4
+private const val PANEL_FADE_SCALE = 0.96f
+private const val PANEL_REVEAL_FADE_END = 0.6f
 
 private const val SWITCH_RESPONSE = 0.2
 private const val SWITCH_BOUNCE = 0.05f

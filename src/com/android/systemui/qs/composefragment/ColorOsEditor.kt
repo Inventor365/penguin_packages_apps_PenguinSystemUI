@@ -35,6 +35,7 @@ import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -89,6 +90,8 @@ fun ColorOsEditor(viewModel: QuickSettingsContainerViewModel, modifier: Modifier
 fun ColorOsEditor(editViewModel: EditModeViewModel, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     BackHandler { editViewModel.stopEditing() }
+    // Dismissing the shade disposes the editor; don't reopen Quick Settings still editing.
+    DisposableEffect(Unit) { onDispose { editViewModel.stopEditing() } }
 
     val tiles by editViewModel.tiles.collectAsStateWithLifecycle(emptyList())
     val current = remember(tiles) { tiles.filter { it.isCurrent } }

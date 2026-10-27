@@ -36,14 +36,17 @@ import javax.inject.Inject
 class PenguinShadeMotion @Inject constructor() : ShadeMotion {
     private var defaultQsStyle = false
     private var cos = false
+    private var cosPanel = false
     private var tabletSwitch = false
 
     @Composable
     override fun key(): Any? {
-        defaultQsStyle = effectiveQsPanelStyle().stockLayout
+        val style = effectiveQsPanelStyle()
+        defaultQsStyle = style.stockLayout
+        cosPanel = style == QsPanelStyle.ColorOs
         cos = rememberCosFeature(CosFeature.Shade)
         tabletSwitch = isTabletPanelSwitch()
-        return Triple(defaultQsStyle, cos, tabletSwitch)
+        return listOf(defaultQsStyle, cosPanel, cos, tabletSwitch)
     }
 
     override fun TransitionBuilder.shadeToQuickSettings(animateQsTilesAsShared: () -> Boolean) {
@@ -60,13 +63,15 @@ class PenguinShadeMotion @Inject constructor() : ShadeMotion {
         )
     }
 
+    // Panels other than COS move the same way with or without the COS shade.
     override fun TransitionBuilder.toQuickSettingsShade(durationScale: Double) {
-        if (cos) cosToQuickSettingsShadeTransition(durationScale)
+        if (cos || !cosPanel) cosToQuickSettingsShadeTransition(durationScale, fadePanel = !cosPanel)
         else styledToQuickSettingsShadeTransition(durationScale = durationScale)
     }
 
     override fun TransitionBuilder.fromQuickSettingsShade() {
-        if (cos) cosFromQuickSettingsShadeTransition() else styledFromQuickSettingsShadeTransition()
+        if (cos || !cosPanel) cosFromQuickSettingsShadeTransition(fadePanel = !cosPanel)
+        else styledFromQuickSettingsShadeTransition()
     }
 
     override fun TransitionBuilder.toNotificationsShade(
