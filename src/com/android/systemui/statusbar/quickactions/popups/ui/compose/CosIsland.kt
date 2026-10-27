@@ -97,14 +97,19 @@ internal fun CosIslandShell(
     moons: Boolean,
     onGone: () -> Unit,
     modifier: Modifier = Modifier,
+    widthScale: Float = 1f,
+    heightScale: Float = 1f,
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
     val holePx = with(density) { hole.toPx() }
-    val heightPx = with(density) { CosIsland.height(hole).toPx() }
+    // The island's size settings change while it is showing, and the animations below run in
+    // effects started once, so they read the current size through these.
+    val heightPx by
+        rememberUpdatedState(with(density) { (CosIsland.height(hole) * heightScale).toPx() })
     val extraPx = with(density) { CosIsland.ExtraWidth.toPx() }
     val switchPx = with(density) { CosIsland.SwitchWidth.toPx() }
-    val maxWidthPx = with(density) { CosIsland.MaxWidth.roundToPx() }
+    val maxWidthPx = with(density) { (CosIsland.MaxWidth * widthScale).roundToPx() }
     val blurPx = with(density) { CosIsland.ContentBlur.toPx() }
 
     val width = remember { Animatable(0f) }
@@ -205,6 +210,15 @@ internal fun CosIslandShell(
             .collectLatest { (w, isBusy) ->
                 if (!isBusy && w > 0 && currentVisible) {
                     width.animateTo(w.toFloat(), tween(300, easing = CosIsland.Move))
+                }
+            }
+    }
+
+    LaunchedEffect(Unit) {
+        snapshotFlow { heightPx to busy }
+            .collectLatest { (h, isBusy) ->
+                if (!isBusy && currentVisible && height.value > 0f) {
+                    height.animateTo(h, tween(300, easing = CosIsland.Move))
                 }
             }
     }
