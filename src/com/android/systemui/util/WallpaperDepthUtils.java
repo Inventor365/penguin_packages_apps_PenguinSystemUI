@@ -28,6 +28,8 @@ import android.graphics.drawable.LayerDrawable;
 import android.graphics.Rect;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.MathUtils;
@@ -45,6 +47,8 @@ import com.android.systemui.statusbar.phone.ScrimState;
 import com.android.systemui.tuner.TunerService;
 
 import dagger.Lazy;
+
+import java.io.File;
 
 public class WallpaperDepthUtils implements DepthSubject {
 
@@ -86,6 +90,12 @@ public class WallpaperDepthUtils implements DepthSubject {
     private boolean mOnLockscreenScene = true;
     private boolean mFloating;
     private FloatingDepthMotion mFloatingMotion;
+
+    private final Handler mMainHandler = new Handler(Looper.getMainLooper());
+    private final Runnable mLoadRunnable = this::startLoad;
+    private int mLoadGeneration;
+    /** What the subject on screen was decoded from; see {@link LoadWallpaperTask#keyFor}. */
+    private String mLoadedKey;
 
     private int mBottomFadeDp = DEFAULT_BOTTOM_FADE_DP;
     private int mFadeCurvePercent = DEFAULT_FADE_CURVE_PERCENT;
@@ -215,7 +225,7 @@ public class WallpaperDepthUtils implements DepthSubject {
                 case WALLPAPER_DEPTH_OPACITY_KEY:
                     int opacity = TunerService.parseInteger(newValue, 100);
                     mDWallOpacity = Math.round(opacity * 2.55f);
-                    updateDepthWallpaper(true);
+                    applyOpacity();
                     break;
                 case WALLPAPER_DEPTH_OFFSET_X_KEY:
                     mOffsetX = TunerService.parseInteger(newValue, 0);
@@ -250,6 +260,14 @@ public class WallpaperDepthUtils implements DepthSubject {
     public void setSubjectAlpha(float subjectAlpha) {
         if (mLockScreenSubject == null) return;
         mLockScreenSubject.post(() -> mLockScreenSubject.setAlpha(subjectAlpha));
+    }
+
+    private void applyOpacity() {
+        if (mLockScreenSubject == null) return;
+        Drawable background = mLockScreenSubject.getBackground();
+        if (background != null) {
+            background.setAlpha(mDWallOpacity);
+        }
     }
 
     private void applyBottomFade() {
@@ -409,25 +427,46 @@ public class WallpaperDepthUtils implements DepthSubject {
     }
 
     public Bitmap getResizedBitmap(Bitmap wallpaperBitmap, float xOffsetDp, float yOffsetDp) {
-        Rect displayBounds = mContext.getSystemService(WindowManager.class)
-                .getCurrentWindowMetrics()
-                .getBounds();
+        return getResizedBitmap(wallpaperBitmap, xOffsetDp, yOffsetDp, portraitBounds());
+    }
+
+    /**
+     * Scales {@code wallpaperBitmap} to cover {@code target} and crops it to exactly that size, shifted by the
+     * user's offsets. The subject is drawn stretched to the screen, so a crop that ran past the
+     * image's edge and came out narrower or shorter than the screen pulled it out of line with the
+     * wallpaper; the shift now stops at the edge instead.
+     */
+    private Bitmap getResizedBitmap(Bitmap wallpaperBitmap, float xOffsetDp, float yOffsetDp,
+            Rect target) {
         DisplayMetrics displayMetrics = mContext.getResources().getDisplayMetrics();
-        float xOffsetPx = xOffsetDp * displayMetrics.density;
-        float yOffsetPx = yOffsetDp * displayMetrics.density;
-        float ratioW = displayBounds.width() / (float) wallpaperBitmap.getWidth();
-        float ratioH = displayBounds.height() / (float) wallpaperBitmap.getHeight();
-        int desiredHeight = Math.round(Math.max(ratioH, ratioW) * wallpaperBitmap.getHeight());
-        int desiredWidth = Math.round(Math.max(ratioH, ratioW) * wallpaperBitmap.getWidth());
-        desiredHeight = Math.max(desiredHeight, 0);
-        desiredWidth = Math.max(desiredWidth, 0);
-        Bitmap scaledWallpaperBitmap = Bitmap.createScaledBitmap(wallpaperBitmap, desiredWidth, desiredHeight, true);
-        int xPixelShift = Math.max((desiredWidth - displayBounds.width()) / 2, 0) - Math.round(xOffsetPx);
-        int yPixelShift = Math.max((desiredHeight - displayBounds.height()) / 2, 0) - Math.round(yOffsetPx);
-        int cropWidth = Math.min(displayBounds.width(), scaledWallpaperBitmap.getWidth() - xPixelShift);
-        int cropHeight = Math.min(displayBounds.height(), scaledWallpaperBitmap.getHeight() - yPixelShift);
-        scaledWallpaperBitmap = Bitmap.createBitmap(scaledWallpaperBitmap, Math.max(xPixelShift, 0), Math.max(yPixelShift, 0), cropWidth, cropHeight);
-        return scaledWallpaperBitmap;
+        int width = target.width();
+        int height = target.height();
+        float scale = Math.max(width / (float) wallpaperBitmap.getWidth(),
+                height / (float) wallpaperBitmap.getHeight());
+        int scaledWidth = Math.max(Math.round(wallpaperBitmap.getWidth() * scale), width);
+        int scaledHeight = Math.max(Math.round(wallpaperBitmap.getHeight() * scale), height);
+        Bitmap scaled = Bitmap.createScaledBitmap(wallpaperBitmap, scaledWidth, scaledHeight, true);
+        int x = MathUtils.constrain((scaledWidth - width) / 2
+                - Math.round(xOffsetDp * displayMetrics.density), 0, scaledWidth - width);
+        int y = MathUtils.constrain((scaledHeight - height) / 2
+                - Math.round(yOffsetDp * displayMetrics.density), 0, scaledHeight - height);
+        Bitmap cropped = Bitmap.createBitmap(scaled, x, y, width, height);
+        if (scaled != cropped && scaled != wallpaperBitmap) {
+            scaled.recycle();
+        }
+        return cropped;
+    }
+
+    /**
+     * The screen in portrait, which is the only way the subject is shown. Measuring the current
+     * window instead decoded a sideways subject when the settings changed in landscape.
+     */
+    private Rect portraitBounds() {
+        Rect bounds = mContext.getSystemService(WindowManager.class)
+                .getMaximumWindowMetrics()
+                .getBounds();
+        return new Rect(0, 0, Math.min(bounds.width(), bounds.height()),
+                Math.max(bounds.width(), bounds.height()));
     }
 
     public void updateDepthWallpaper(boolean forced) {
@@ -436,37 +475,99 @@ public class WallpaperDepthUtils implements DepthSubject {
         boolean backgroundMissing = (mLockScreenSubject.getBackground() == null);
         if (!mWallpaperLoaded || pathChanged || backgroundMissing || forced) {
             Log.d("WallpaperDepthUtils", "updateDepthWallpaper: " + (mWallpaperLoaded || forced ? "update required" : "first load"));
-            new LoadWallpaperTask().execute();
+            scheduleLoad();
             mWallpaperLoaded = true;
             mPreviousWallpaperPath = mWallpaperSubjectPath;
         }
         updateDepthWallpaperVisibility();
     }
 
+    /**
+     * Every tunable asks for a reload, and registering delivers all of them at once, so post the
+     * load and let a burst of requests decode the subject once.
+     */
+    private void scheduleLoad() {
+        mMainHandler.removeCallbacks(mLoadRunnable);
+        mMainHandler.post(mLoadRunnable);
+    }
+
+    private void startLoad() {
+        if (mLockScreenSubject == null || !isDWallpaperEnabled()) return;
+        String loaded = mLockScreenSubject.getBackground() != null ? mLoadedKey : null;
+        new LoadWallpaperTask(++mLoadGeneration, mWallpaperSubjectPath, mOffsetX, mOffsetY,
+                portraitBounds(), loaded).execute();
+    }
+
     private class LoadWallpaperTask extends AsyncTask<Void, Void, Drawable> {
+        private final int mGeneration;
+        private final String mPath;
+        private final int mTaskOffsetX;
+        private final int mTaskOffsetY;
+        private final Rect mTarget;
+        private final String mShownKey;
+        private String mKey;
+        private Bitmap mBitmap;
+        private boolean mUnchanged;
+
+        LoadWallpaperTask(int generation, String path, int offsetX, int offsetY, Rect target,
+                String shownKey) {
+            mGeneration = generation;
+            mPath = path;
+            mTaskOffsetX = offsetX;
+            mTaskOffsetY = offsetY;
+            mTarget = target;
+            mShownKey = shownKey;
+        }
+
+        /** Changes whenever the subject file, the offsets or the screen it is cut for do. */
+        private String keyFor(File file) {
+            return mPath + '|' + file.lastModified() + '|' + file.length() + '|' + mTaskOffsetX
+                    + '|' + mTaskOffsetY + '|' + mTarget.width() + 'x' + mTarget.height();
+        }
+
         @Override
         protected Drawable doInBackground(Void... voids) {
             try {
-                Log.d("LoadWallpaperTask", "Wallpaper path: " + mWallpaperSubjectPath);
-                Bitmap bitmap = BitmapFactory.decodeFile(mWallpaperSubjectPath);
+                Log.d("LoadWallpaperTask", "Wallpaper path: " + mPath);
+                mKey = keyFor(new File(mPath));
+                // Waking from doze asks for a reload in case the file was replaced in place;
+                // the subject on screen is still right unless something it was made from changed.
+                if (mKey.equals(mShownKey)) {
+                    mUnchanged = true;
+                    return null;
+                }
+                BitmapFactory.Options bounds = new BitmapFactory.Options();
+                bounds.inJustDecodeBounds = true;
+                BitmapFactory.decodeFile(mPath, bounds);
+                if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+                    Log.d("LoadWallpaperTask", "Failed to decode bitmap from file");
+                    return null;
+                }
+                // Decode no larger than needed to cover the screen; a camera-sized subject
+                // decoded whole is tens of megabytes in SystemUI.
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inSampleSize = 1;
+                while (bounds.outWidth / (options.inSampleSize * 2) >= mTarget.width()
+                        && bounds.outHeight / (options.inSampleSize * 2) >= mTarget.height()) {
+                    options.inSampleSize *= 2;
+                }
+                Bitmap bitmap = BitmapFactory.decodeFile(mPath, options);
                 if (bitmap == null) {
                     Log.d("LoadWallpaperTask", "Failed to decode bitmap from file");
                     return null;
                 }
-                Bitmap resizedBitmap = getResizedBitmap(bitmap, mOffsetX, mOffsetY);
-                if (resizedBitmap == null) {
-                    Log.d("LoadWallpaperTask", "Failed to decode resized bitmap from file");
-                    return null;
+                Bitmap resizedBitmap = getResizedBitmap(bitmap, mTaskOffsetX, mTaskOffsetY,
+                        mTarget);
+                if (resizedBitmap != bitmap) {
+                    bitmap.recycle();
                 }
-                if (mWallpaperBitmap != null) {
-                    mWallpaperBitmap = null;
-                }
-                mWallpaperBitmap = resizedBitmap;
-                Drawable bitmapDrawable = new FadeBottomDrawable(mWallpaperBitmap, dpToPx(mBottomFadeDp));
-                ((FadeBottomDrawable) bitmapDrawable).setFadeCurveExponent(computeFadeCurveExponent());
-                ((FadeBottomDrawable) bitmapDrawable).setBottomInsetPx(dpToPx(mBottomInsetDp));
-                bitmapDrawable.setAlpha(255);
-                return bitmapDrawable;
+                mBitmap = resizedBitmap;
+                FadeBottomDrawable drawable =
+                        new FadeBottomDrawable(resizedBitmap, dpToPx(mBottomFadeDp));
+                drawable.setFadeCurveExponent(computeFadeCurveExponent());
+                drawable.setBottomInsetPx(dpToPx(mBottomInsetDp));
+                drawable.setAlpha(255);
+                return drawable;
             } catch (OutOfMemoryError e) {
                 Log.e("LoadWallpaperTask", "Out of memory error", e);
                 return null;
@@ -478,27 +579,37 @@ public class WallpaperDepthUtils implements DepthSubject {
 
         @Override
         protected void onPostExecute(Drawable drawable) {
-            if (drawable == null || mWallpaperBitmap == null) {
-                Log.d("LoadWallpaperTask", "decodeFile returned nothing, skipping application of subject as background");
-                mWallpaperLoaded = false;
+            if (mGeneration != mLoadGeneration) {
+                // A newer request is queued behind this one and will set the subject.
+                return;
+            }
+            if (mUnchanged) {
                 updateDepthWallpaperVisibility();
                 return;
             }
+            if (drawable == null) {
+                Log.d("LoadWallpaperTask", "decodeFile returned nothing, skipping application of subject as background");
+                mWallpaperLoaded = false;
+                mLoadedKey = null;
+                updateDepthWallpaperVisibility();
+                return;
+            }
+            mWallpaperBitmap = mBitmap;
+            mLoadedKey = mKey;
             mLockScreenSubject.setBackground(drawable);
             mLockScreenSubject.getBackground().setAlpha(mDWallOpacity);
             Log.d("LoadWallpaperTask", "Subject Loaded!");
             updateDepthWallpaperVisibility();
         }
-
-        @Override
-        protected void onCancelled() {
-            super.onCancelled();
-            mWallpaperBitmap = null;
-        }
     }
-    
+
+    /**
+     * The scene container takes the subject out and puts it back whenever it rebinds its window.
+     * This object lives as long as SystemUI does, so it keeps listening to its settings; dropping
+     * the tunable here left every later change to the depth wallpaper ignored. Only the tilt
+     * sensor has to stop with the view.
+     */
     public void onDetachedFromWindow() {
-        mTunerService.removeTunable(mTunable);
-        mWallpaperBitmap = null;
+        mFloatingMotion.stop();
     }
 }
