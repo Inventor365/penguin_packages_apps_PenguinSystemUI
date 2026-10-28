@@ -5,12 +5,9 @@
 
 package com.android.systemui.scene.ui.composable.transitions
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.lerp
-import androidx.compose.ui.unit.dp
 import com.android.compose.animation.scene.ContentKey
 import com.android.compose.animation.scene.Edge
 import com.android.compose.animation.scene.ElementKey
@@ -33,6 +30,7 @@ import com.android.systemui.shade.ui.composable.OverlayShade
 import com.android.systemui.shade.ui.composable.ShadeHeader
 import kotlin.time.Duration.Companion.milliseconds
 
+/** Quick Settings opens and closes like the notification shade. */
 fun TransitionBuilder.styledToQuickSettingsShadeTransition(
     durationScale: Double = 1.0,
 ) {
@@ -40,30 +38,9 @@ fun TransitionBuilder.styledToQuickSettingsShadeTransition(
 
     oxygenPanelReveal(QuickSettingsShade.Elements.Panel)
 
+    fractionRange(start = .16f, end = 0.8f) { fade(QuickSettingsShade.Elements.StatusBar) }
+    fractionRange(start = .33f, end = 0.8f) { fade(QuickSettingsShade.Elements.Header) }
     fractionRange(end = .5f) { fade(OverlayShade.Elements.Scrim) }
-    fractionRange(start = .5f) {
-        fade(QuickSettingsShade.Elements.StatusBar)
-        fade(QuickSettingsShade.Elements.Header)
-    }
-}
-
-fun TransitionBuilder.styledFromQuickSettingsShadeTransition(durationScale: Double = 1.0) {
-    spec =
-        spring(
-            dampingRatio = 1f,
-            stiffness = (800.0 / (durationScale * durationScale)).toFloat(),
-            visibilityThreshold = Spring.DefaultDisplacementThreshold,
-        )
-
-    fractionRange(end = .5f) { fade(QuickSettingsShade.Elements.Panel) }
-    scaleDraw(QuickSettingsShade.Elements.Panel, scaleX = 0.94f, scaleY = 0.94f)
-    translate(QuickSettingsShade.Elements.Panel, y = (-24).dp)
-
-    fractionRange(end = .5f) {
-        fade(QuickSettingsShade.Elements.StatusBar)
-        fade(QuickSettingsShade.Elements.Header)
-    }
-    fade(OverlayShade.Elements.Scrim)
 }
 
 fun TransitionBuilder.styledToNotificationsShadeTransition(
