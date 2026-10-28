@@ -25,6 +25,7 @@ import android.graphics.Rect
 import android.media.AudioManager
 import android.os.Bundle
 import android.os.Trace
+import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -100,6 +101,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -406,6 +408,8 @@ fun VolumeLayout(
                         Modifier.fillMaxSize().thenIf(interactive) {
                             Modifier.sliderGestures(
                                 scope, onValueChanged, onValueChangeFinished, toggleMute,
+                                iconZone = CosSliderIconZone,
+                                onIconTap = toggleMute,
                             )
                         }
                     )
@@ -417,6 +421,7 @@ fun VolumeLayout(
                     onValueChanged = onValueChanged,
                     onValueChangeFinished = onValueChangeFinished,
                     onLongPress = toggleMute,
+                    onIconTap = toggleMute,
                     icon = icon,
                     glassIconTint = LiquidGlassVolume,
                     modifier = Modifier,
@@ -532,7 +537,9 @@ fun BrightnessLayout(
         Unit
     }
 
+    val view = LocalView.current
     val toggleBrightnessMode = {
+        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
         val newMode = if (isAuto) {
             Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
         } else {
@@ -558,8 +565,8 @@ fun BrightnessLayout(
             val icon =
                 painterResource(
                     id =
-                        if (liquidGlassOn) R.drawable.lg_glyph_sun_max_fill
-                        else if (isAuto) R.drawable.ic_qs_brightness_auto_on_new
+                        if (isAuto) R.drawable.ic_qs_brightness_auto_on_new
+                        else if (liquidGlassOn) R.drawable.lg_glyph_sun_max_fill
                         else R.drawable.ic_qs_brightness_auto_off_new
                 )
             if (horizontal) {
@@ -590,6 +597,8 @@ fun BrightnessLayout(
                             Modifier.sliderGestures(
                                 scope, onValueChanged, onValueChangeFinished,
                                 toggleBrightnessMode,
+                                iconZone = CosSliderIconZone,
+                                onIconTap = toggleBrightnessMode,
                             )
                         }
                     )
@@ -601,6 +610,7 @@ fun BrightnessLayout(
                     onValueChanged = onValueChanged,
                     onValueChangeFinished = onValueChangeFinished,
                     onLongPress = toggleBrightnessMode,
+                    onIconTap = toggleBrightnessMode,
                     icon = icon,
                     glassIconTint = LiquidGlassBrightness,
                     modifier = Modifier,
@@ -614,6 +624,12 @@ fun BrightnessLayout(
         }
     }
 }
+
+/** Extra room above a slider's icon that still counts as tapping it. */
+private val SliderIconTapSlop = 16.dp
+
+/** The icon of a [CosGlassSlider] sits 18dp up and is 26dp tall. */
+private val CosSliderIconZone = 18.dp + 26.dp + SliderIconTapSlop
 
 @Composable
 fun VerticalSlider(
@@ -630,6 +646,7 @@ fun VerticalSlider(
     housingWidth: Dp? = 75.dp,
     capsule: Boolean = false,
     glassIconTint: Color? = null,
+    onIconTap: (() -> Unit)? = null,
 ) {
     val glass = liquidGlassOn && !isStockQsStyle
     val iconSize = if (capsule) 28.dp else 24.dp
@@ -660,7 +677,14 @@ fun VerticalSlider(
                 else cornerRadius?.let { RoundedCornerShape(it) } ?: RoundedCornerShape(percent = 50)
             )
             .thenIf(interactive) {
-                Modifier.sliderGestures(scope, onValueChanged, onValueChangeFinished, onLongPress)
+                Modifier.sliderGestures(
+                    scope,
+                    onValueChanged,
+                    onValueChangeFinished,
+                    onLongPress,
+                    iconZone = iconBottomPadding + iconSize + SliderIconTapSlop,
+                    onIconTap = onIconTap,
+                )
             },
         contentAlignment = Alignment.BottomCenter
     ) {
@@ -763,11 +787,13 @@ fun Modifier.sliderGesturesHorizontal(
                 isLongPress = true
             }
         var lastProgress = 0f
+        var dragged = false
         drag(down.id) { change ->
             if (change.pressed) {
                 longPressJob.cancel()
                 if (!isLongPress) {
                     change.consume()
+                    dragged = true
                     val newProgress = (change.position.x / size.width).coerceIn(0f, 1f)
                     lastProgress = newProgress
                     onValueChanged(newProgress)
@@ -775,17 +801,25 @@ fun Modifier.sliderGesturesHorizontal(
             }
         }
         longPressJob.cancel()
-        if (!isLongPress) {
+        // A tap without a drag keeps the value; finishing it would have set 0.
+        if (!isLongPress && dragged) {
             onValueChangeFinished(lastProgress)
         }
     }
 }
 
+/**
+ * Drags set the value from where the finger is. A tap leaves the value alone: it used to finish
+ * with the untouched starting progress of 0, so tapping a slider dropped it to the bottom. A tap
+ * within [iconZone] of the bottom, where the icon sits, runs [onIconTap] instead.
+ */
 fun Modifier.sliderGestures(
     scope: CoroutineScope,
     onValueChanged: (Float) -> Unit,
     onValueChangeFinished: (Float) -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    iconZone: Dp = 0.dp,
+    onIconTap: (() -> Unit)? = null,
 ): Modifier = pointerInput(Unit) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
@@ -798,11 +832,13 @@ fun Modifier.sliderGestures(
                 isLongPress = true
             }
         var lastProgress = 0f
+        var dragged = false
         drag(down.id) { change ->
             if (change.pressed) {
                 longPressJob.cancel()
                 if (!isLongPress) {
                     change.consume()
+                    dragged = true
                     val height = size.height
                     val newProgress = (1f - (change.position.y / height)).coerceIn(0f, 1f)
                     lastProgress = newProgress
@@ -811,8 +847,11 @@ fun Modifier.sliderGestures(
             }
         }
         longPressJob.cancel()
-        if (!isLongPress) {
+        if (isLongPress) return@awaitEachGesture
+        if (dragged) {
             onValueChangeFinished(lastProgress)
+        } else if (onIconTap != null && down.position.y >= size.height - iconZone.toPx()) {
+            onIconTap()
         }
     }
 }
