@@ -6,6 +6,7 @@
 package com.android.systemui.statusbar.quickactions.popups.ui.binder
 
 import android.content.Context
+import android.content.res.Configuration
 import android.database.ContentObserver
 import android.graphics.Color
 import android.graphics.Rect
@@ -19,8 +20,11 @@ import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalConfiguration
 import com.android.compose.theme.PlatformTheme
 import com.android.systemui.penguin.StatusBarIsland
 import com.android.systemui.res.R
@@ -93,8 +97,24 @@ constructor(
                             remember(context.displayId) {
                                 chipsViewModelStore.forDisplay(context.displayId)
                             }
+                        val hideInLandscape by
+                            remember {
+                                    DynamicIslandFeatureSettings.observeDynamicIslandFeatureEnabled(
+                                        context,
+                                        DynamicIslandFeatureSettings.DISABLE_IN_LANDSCAPE,
+                                        defaultValue = false,
+                                    )
+                                }
+                                .collectAsState(initial = false)
+                        val landscape =
+                            LocalConfiguration.current.orientation ==
+                                Configuration.ORIENTATION_LANDSCAPE
                         StatusBarDynamicIslandContainer(
-                            chips = islandViewModel.shownPopupChips,
+                            // Empty, so the island also reports no bounds and the status icons
+                            // under it come back.
+                            chips =
+                                if (hideInLandscape && landscape) emptyList()
+                                else islandViewModel.shownPopupChips,
                             onMediaControlPopupVisibilityChanged = {},
                             onIslandBoundsChanged = reportBounds,
                         )
