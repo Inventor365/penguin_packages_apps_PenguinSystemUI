@@ -55,6 +55,8 @@ object DynamicIslandFeatureSettings {
     const val HEIGHT_SCALE = "status_bar_dynamic_island_height_scale"
     const val POPUP_COLOR_MODE = "status_bar_dynamic_island_popup_color_mode"
     const val LOCKSCREEN = "status_bar_dynamic_island_lockscreen"
+    /** Hide the status bar island while the device is sideways. Same key as Lunaris. */
+    const val DISABLE_IN_LANDSCAPE = "status_bar_dynamic_island_disable_in_landscape"
 
     /**
      * Whether the island is on when [Settings.System.STATUS_BAR_SHOW_DYNAMIC_ISLAND] was never

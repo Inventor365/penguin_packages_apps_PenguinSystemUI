@@ -6,6 +6,7 @@
 package com.android.systemui.statusbar.quickactions.popups.ui.binder
 
 import android.content.Context
+import android.content.res.Configuration
 import android.database.ContentObserver
 import android.graphics.Color
 import android.graphics.Rect
@@ -23,12 +24,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalConfiguration
 import com.android.compose.theme.PlatformTheme
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.penguin.StatusBarIsland
@@ -109,6 +112,18 @@ constructor(
                             remember(context.displayId) {
                                 chipsViewModelStore.forDisplay(context.displayId)
                             }
+                        val hideInLandscape by
+                            remember {
+                                    DynamicIslandFeatureSettings.observeDynamicIslandFeatureEnabled(
+                                        context,
+                                        DynamicIslandFeatureSettings.DISABLE_IN_LANDSCAPE,
+                                        defaultValue = false,
+                                    )
+                                }
+                                .collectAsState(initial = false)
+                        val landscape =
+                            LocalConfiguration.current.orientation ==
+                                Configuration.ORIENTATION_LANDSCAPE
                         val appHandleBounds by
                             produceState(emptyList<Rect>(), context.displayId) {
                                 val handles = appHandles.orElse(null) ?: return@produceState
@@ -123,7 +138,11 @@ constructor(
                             }
                         val island = @Composable {
                             StatusBarDynamicIslandContainer(
-                                chips = islandViewModel.shownPopupChips,
+                                // Empty, so the island also reports no bounds and the status icons
+                                // under it come back.
+                                chips =
+                                    if (hideInLandscape && landscape) emptyList()
+                                    else islandViewModel.shownPopupChips,
                                 onMediaControlPopupVisibilityChanged = {},
                                 onIslandBoundsChanged = reportBounds,
                                 appHandleBounds = appHandleBounds,
