@@ -201,7 +201,13 @@ private fun PenguinMediaCardContent(
         snapshotFlow { pagerState.settledPage }
             .collect { if (it < cards.size) viewModel.onCardSelected(it) }
     }
-    HorizontalPager(state = pagerState, pageSpacing = PageGap, modifier = modifier) { page ->
+    HorizontalPager(
+        state = pagerState,
+        pageSpacing = PageGap,
+        // A single player can't page, so leave the swipe for switching shades.
+        userScrollEnabled = false,
+        modifier = modifier.pageOnlyWhenPossible(pagerState),
+    ) { page ->
         val card = cards[page]
         val dots: @Composable () -> Unit = { PageDots(cards.size, pagerState.currentPage) }
         val seekColor = rememberCosMediaColor((card.background as? CommonIcon.Loaded)?.drawable)
@@ -1091,7 +1097,12 @@ private fun MyUiMediaCardContent(
     }
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val height = maxOf(maxWidth / 4, MyUiMinHeight)
-        HorizontalPager(state = pagerState, pageSpacing = PageGap) { page ->
+        HorizontalPager(
+            state = pagerState,
+            pageSpacing = PageGap,
+            userScrollEnabled = false,
+            modifier = Modifier.pageOnlyWhenPossible(pagerState),
+        ) { page ->
             MyUiMediaPage(cards[page], height)
         }
     }

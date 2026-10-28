@@ -82,6 +82,8 @@ import com.penguin.systemui.R as PenguinR
 import com.android.systemui.shade.ui.composable.CosTileTips
 import com.android.systemui.shade.ui.composable.cosSwitchRow
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.toArgb
@@ -91,7 +93,16 @@ import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.rememberLottieDynamicProperties
 import com.airbnb.lottie.compose.rememberLottieDynamicProperty
 import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import com.android.compose.modifiers.thenIf
+import kotlin.math.abs
+import kotlinx.coroutines.launch
 
 internal val ColorOsGap = 18.dp
 private val ColorOsPillHeight = 68.dp
@@ -515,10 +526,15 @@ fun ColorOsTileGrid(tiles: List<TileViewModel>, modifier: Modifier = Modifier) {
     Column(modifier.cosModuleReveal(4).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         HorizontalPager(
             state = pager,
+            // Paged by pageOnlyWhenPossible() instead, so a swipe the tiles can't page with
+            // (towards the notifications on the first page) switches shades as it does on the
+            // rest of the panel, rather than only stretching the pager.
+            userScrollEnabled = false,
             modifier =
                 Modifier.cosSwitchRow()
                     .fillMaxWidth()
-                    .height(ColorOsTileRowHeight * rows + ColorOsGridHeadroom),
+                    .height(ColorOsTileRowHeight * rows + ColorOsGridHeadroom)
+                    .pageOnlyWhenPossible(pager),
             verticalAlignment = Alignment.Top,
         ) { page ->
             Column(Modifier.fillMaxWidth().padding(top = ColorOsGridHeadroom)) {
@@ -543,6 +559,57 @@ fun ColorOsTileGrid(tiles: List<TileViewModel>, modifier: Modifier = Modifier) {
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * Pages [pager] with horizontal drags, but only claims a drag once it is past touch slop and the
+ * pager can move that way. Anything else is left unconsumed for whoever is above.
+ */
+@Composable
+internal fun Modifier.pageOnlyWhenPossible(pager: PagerState): Modifier {
+    val scope = rememberCoroutineScope()
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    return pointerInput(pager, rtl) {
+        val flingVelocity = 400.dp.toPx()
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false)
+            val slop = viewConfiguration.touchSlop
+            val velocity = VelocityTracker()
+            velocity.addPosition(down.uptimeMillis, down.position)
+            var claimed = false
+            val startPage = pager.currentPage
+            while (true) {
+                val change =
+                    awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                if (!change.pressed) break
+                velocity.addPosition(change.uptimeMillis, change.position)
+                if (!claimed) {
+                    if (change.isConsumed) return@awaitEachGesture
+                    val moved = change.position - down.position
+                    if (abs(moved.y) > slop && abs(moved.y) > abs(moved.x)) {
+                        return@awaitEachGesture
+                    }
+                    if (abs(moved.x) <= slop) continue
+                    val backward = (moved.x > 0f) != rtl
+                    if (backward && !pager.canScrollBackward) return@awaitEachGesture
+                    if (!backward && !pager.canScrollForward) return@awaitEachGesture
+                    claimed = true
+                }
+                change.consume()
+                val dx = change.positionChange().x
+                pager.dispatchRawDelta(if (rtl) dx else -dx)
+            }
+            if (!claimed) return@awaitEachGesture
+            val vx = velocity.calculateVelocity().x.let { if (rtl) -it else it }
+            val target =
+                when {
+                    vx <= -flingVelocity -> startPage + 1
+                    vx >= flingVelocity -> startPage - 1
+                    else -> pager.currentPage
+                }.coerceIn(0, pager.pageCount - 1)
+            scope.launch { pager.animateScrollToPage(target) }
         }
     }
 }
