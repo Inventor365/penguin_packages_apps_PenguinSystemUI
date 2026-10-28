@@ -39,7 +39,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
@@ -86,6 +85,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
@@ -121,6 +121,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.compose.ui.input.pointer.PointerInputScope
 import com.android.app.tracing.coroutines.launchTraced
 import com.android.compose.animation.scene.ContentKey
 import com.android.compose.animation.scene.ContentScope
@@ -775,43 +776,24 @@ fun Modifier.sliderGesturesHorizontal(
     onValueChanged: (Float) -> Unit,
     onValueChangeFinished: (Float) -> Unit,
     onLongPress: () -> Unit,
-): Modifier = pointerInput(Unit) {
-    awaitEachGesture {
-        val down = awaitFirstDown(requireUnconsumed = false)
-        val longPressTimeout = viewConfiguration.longPressTimeoutMillis
-        var isLongPress = false
-        val longPressJob =
-            scope.launch {
-                delay(longPressTimeout)
-                onLongPress()
-                isLongPress = true
-            }
-        var lastProgress = 0f
-        var dragged = false
-        drag(down.id) { change ->
-            if (change.pressed) {
-                longPressJob.cancel()
-                if (!isLongPress) {
-                    change.consume()
-                    dragged = true
-                    val newProgress = (change.position.x / size.width).coerceIn(0f, 1f)
-                    lastProgress = newProgress
-                    onValueChanged(newProgress)
-                }
-            }
-        }
-        longPressJob.cancel()
-        // A tap without a drag keeps the value; finishing it would have set 0.
-        if (!isLongPress && dragged) {
-            onValueChangeFinished(lastProgress)
-        }
-    }
-}
+): Modifier =
+    sliderPointerInput(
+        scope,
+        vertical = false,
+        progressAt = { (it.x / size.width).coerceIn(0f, 1f) },
+        onValueChanged,
+        onValueChangeFinished,
+        onLongPress,
+        isIconTap = { false },
+        onIconTap = {},
+    )
 
 /**
- * Drags set the value from where the finger is. A tap leaves the value alone: it used to finish
- * with the untouched starting progress of 0, so tapping a slider dropped it to the bottom. A tap
- * within [iconZone] of the bottom, where the icon sits, runs [onIconTap] instead.
+ * Drags set the value from where the finger is, once the finger has moved past touch slop along
+ * the slider; a smaller wobble during a tap no longer jumps the value. A tap leaves the value
+ * alone, and one within [iconZone] of the bottom, where the icon sits, runs [onIconTap]. Taps are
+ * consumed so they don't also reach the panel's tap-outside-to-close. A drag that starts across
+ * the slider is left alone, for the swipe between the shades.
  */
 fun Modifier.sliderGestures(
     scope: CoroutineScope,
@@ -820,10 +802,32 @@ fun Modifier.sliderGestures(
     onLongPress: () -> Unit,
     iconZone: Dp = 0.dp,
     onIconTap: (() -> Unit)? = null,
+): Modifier =
+    sliderPointerInput(
+        scope,
+        vertical = true,
+        progressAt = { (1f - it.y / size.height).coerceIn(0f, 1f) },
+        onValueChanged,
+        onValueChangeFinished,
+        onLongPress,
+        isIconTap = { onIconTap != null && it.y >= size.height - iconZone.toPx() },
+        onIconTap = { onIconTap?.invoke() },
+    )
+
+private fun Modifier.sliderPointerInput(
+    scope: CoroutineScope,
+    vertical: Boolean,
+    progressAt: PointerInputScope.(Offset) -> Float,
+    onValueChanged: (Float) -> Unit,
+    onValueChangeFinished: (Float) -> Unit,
+    onLongPress: () -> Unit,
+    isIconTap: PointerInputScope.(Offset) -> Boolean,
+    onIconTap: () -> Unit,
 ): Modifier = pointerInput(Unit) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
         val longPressTimeout = viewConfiguration.longPressTimeoutMillis
+        val slop = viewConfiguration.touchSlop
         var isLongPress = false
         val longPressJob =
             scope.launch {
@@ -831,28 +835,44 @@ fun Modifier.sliderGestures(
                 onLongPress()
                 isLongPress = true
             }
+        var dragging = false
         var lastProgress = 0f
-        var dragged = false
-        drag(down.id) { change ->
-            if (change.pressed) {
+        while (true) {
+            val change =
+                awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+            if (!change.pressed) {
                 longPressJob.cancel()
-                if (!isLongPress) {
-                    change.consume()
-                    dragged = true
-                    val height = size.height
-                    val newProgress = (1f - (change.position.y / height)).coerceIn(0f, 1f)
-                    lastProgress = newProgress
-                    onValueChanged(newProgress)
+                change.consume()
+                when {
+                    isLongPress -> {}
+                    dragging -> onValueChangeFinished(lastProgress)
+                    isIconTap(down.position) -> onIconTap()
                 }
+                return@awaitEachGesture
             }
+            if (!dragging) {
+                if (change.isConsumed) {
+                    // Something else claimed the gesture first.
+                    longPressJob.cancel()
+                    return@awaitEachGesture
+                }
+                val moved = change.position - down.position
+                val along = if (vertical) abs(moved.y) else abs(moved.x)
+                val across = if (vertical) abs(moved.x) else abs(moved.y)
+                if (across > slop && across > along) {
+                    longPressJob.cancel()
+                    return@awaitEachGesture
+                }
+                if (along <= slop) continue
+                longPressJob.cancel()
+                if (isLongPress) return@awaitEachGesture
+                dragging = true
+            }
+            change.consume()
+            lastProgress = progressAt(change.position)
+            onValueChanged(lastProgress)
         }
         longPressJob.cancel()
-        if (isLongPress) return@awaitEachGesture
-        if (dragged) {
-            onValueChangeFinished(lastProgress)
-        } else if (onIconTap != null && down.position.y >= size.height - iconZone.toPx()) {
-            onIconTap()
-        }
     }
 }
 
