@@ -56,6 +56,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
@@ -97,6 +98,9 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.widthIn
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
@@ -583,16 +587,26 @@ private fun OutputPill(card: MediaCardViewModel) {
 }
 
 @Composable
-private fun Waveform(card: MediaCardViewModel) {
-    val playing = card.playPauseAction?.state == MediaSessionState.Playing
-    val phase by
-        rememberInfiniteTransition(label = "Waveform")
+private fun mediaWavePhase(animated: Boolean, durationMillis: Int, label: String): State<Float> {
+    val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+    if (!animated || !lifecycleState.isAtLeast(Lifecycle.State.STARTED)) {
+        return rememberUpdatedState(0f)
+    }
+    // Keep the state read inside Canvas; reading the phase here would recompose the
+    // media card every frame instead of only invalidating its drawing.
+    return rememberInfiniteTransition(label = label)
             .animateFloat(
                 initialValue = 0f,
                 targetValue = (2 * PI).toFloat(),
-                animationSpec = infiniteRepeatable(tween(1100, easing = LinearEasing)),
-                label = "WaveformPhase",
+                animationSpec = infiniteRepeatable(tween(durationMillis, easing = LinearEasing)),
+                label = "$label.phase",
             )
+}
+
+@Composable
+private fun Waveform(card: MediaCardViewModel) {
+    val playing = card.playPauseAction?.state == MediaSessionState.Playing
+    val phase by mediaWavePhase(playing, 1100, "Waveform")
     val color = MaterialTheme.colorScheme.onSurfaceVariant
     Canvas(Modifier.size(width = 30.dp, height = 20.dp)) {
         val bars = 6
@@ -1219,14 +1233,8 @@ private fun MyUiSeekBar(navigation: MediaNavigationViewModel, modifier: Modifier
             targetValue = if (showing.isSquiggly) 2.dp else 0.dp,
             label = "MyUiSeekBar.amplitude",
         )
-    val phase by
-        rememberInfiniteTransition(label = "MyUiSeekBar.phase")
-            .animateFloat(
-                initialValue = 0f,
-                targetValue = (2 * PI).toFloat(),
-                animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing)),
-                label = "MyUiSeekBar.phaseValue",
-            )
+    val phase by mediaWavePhase(showing.isSquiggly || amplitude.value > 0f, 1500,
+                               "MyUiSeekBar.phase")
     val currentShowing by rememberUpdatedState(showing)
     val interactive = LocalMediaCardInteractive.current
     Canvas(
