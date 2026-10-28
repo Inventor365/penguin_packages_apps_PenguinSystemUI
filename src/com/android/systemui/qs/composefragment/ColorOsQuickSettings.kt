@@ -91,6 +91,7 @@ import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.rememberLottieDynamicProperties
 import com.airbnb.lottie.compose.rememberLottieDynamicProperty
 import androidx.compose.foundation.interaction.InteractionSource
+import com.android.compose.modifiers.thenIf
 
 internal val ColorOsGap = 18.dp
 private val ColorOsPillHeight = 68.dp
@@ -205,14 +206,25 @@ private fun ColorOsConnectionPill(tile: TileViewModel) {
                 .combinedClickable(
                     interactionSource = interaction,
                     indication = null,
-                    onClick = { tile.primaryAction(uiState) },
+                    // As in stock Quick Settings, the circle toggles a tile that can be toggled
+                    // and the rest of the pill opens its panel (Wi-Fi networks, paired devices).
+                    onClick = {
+                        if (uiState.handlesToggleClick) tile.mainClick(null)
+                        else tile.primaryAction(uiState)
+                    },
                     onLongClick = { tile.settingsClick(null) },
                 )
                 .padding(start = 10.dp, end = 14.dp),
         horizontalArrangement = spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ColorOsCircle(icon, active, 46.dp, colorOsActiveTint(tile.spec.spec), tile.spec.spec)
+        Box(
+            Modifier.thenIf(uiState.handlesToggleClick) {
+                Modifier.clip(CircleShape).clickable { tile.toggleClick() }
+            }
+        ) {
+            ColorOsCircle(icon, active, 46.dp, colorOsActiveTint(tile.spec.spec), tile.spec.spec)
+        }
         Column(Modifier.weight(1f)) {
             Text(
                 text = uiState.label,
@@ -562,7 +574,13 @@ private fun ColorOsTile(tile: TileViewModel, modifier: Modifier = Modifier) {
                         }
                         tile.primaryAction(uiState)
                     },
-                    onLongClick = { tile.settingsClick(null) },
+                    // A tap toggles a toggleable tile, so like stock round tiles a long press
+                    // opens what its click would: Bluetooth devices, Wi-Fi networks, or the
+                    // flashlight strength dialog where the camera supports levels.
+                    onLongClick = {
+                        if (uiState.handlesToggleClick) tile.mainClick(null)
+                        else tile.settingsClick(null)
+                    },
                 ),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
