@@ -50,7 +50,7 @@ import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFe
 import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.readDynamicIslandPopupColorMode
 
 @Composable
-private fun Modifier.plainBlurBehind(shape: Shape): Modifier {
+internal fun Modifier.plainBlurBehind(shape: Shape): Modifier {
     val view = LocalView.current
     val context = LocalContext.current
     val holder = remember(view) { arrayOfNulls<BackgroundBlurDrawable>(1) }
@@ -111,13 +111,10 @@ fun PopupSurface(
     val body: @Composable () -> Unit = {
         Box(Modifier.padding(top = cameraClearance)) { content() }
     }
-    val mode =
-        if (cameraClearance > 0.dp && colorMode != POPUP_COLOR_MODE_BLUR) {
-            POPUP_COLOR_MODE_SOLID_BLACK
-        } else {
-            colorMode
-        }
-    when (mode) {
+    // The island popups start under the camera cutout; the user's background still applies
+    // there (it used to fall back to black for anything but blur, so Default and Solid black
+    // looked the same on every island popup).
+    when (colorMode) {
         POPUP_COLOR_MODE_BLUR -> {
             Box(modifier = modifier.plainBlurBehind(shape).clip(shape)) {
                 CompositionLocalProvider(

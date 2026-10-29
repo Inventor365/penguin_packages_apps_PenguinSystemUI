@@ -63,8 +63,12 @@ import com.android.systemui.common.ui.compose.Icon as UiIconView
 import com.android.systemui.media.controls.shared.model.MediaAction
 import com.android.systemui.statusbar.quickactions.dynamicisland.media.shared.model.MediaControlChipModel
 import com.android.systemui.qs.composefragment.cosSeekGlow
+import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.POPUP_COLOR_MODE_BLUR
+import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.POPUP_COLOR_MODE_SOLID_BLACK
+import com.android.systemui.statusbar.quickactions.popups.ui.compose.plainBlurBehind
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.rememberAlbumArtAccent
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.rememberCosArtTint
+import com.android.systemui.statusbar.quickactions.popups.ui.compose.rememberPopupColorMode
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -120,13 +124,19 @@ fun CosMediaCard(model: MediaControlChipModel, modifier: Modifier = Modifier) {
     val artwork = remember(model.artworkIcon) { (model.artworkIcon as? UiIcon.Loaded)?.drawable }
     val tint = rememberCosArtTint(artwork)
     val shape = RoundedCornerShape(CosMediaCard.Corner)
+    // Settings > Dynamic Island > Popup background: Default keeps the COS card, Blur drops its
+    // fill for the blurred wallpaper, Solid black drops the album-art tint as well.
+    val fill =
+        when (rememberPopupColorMode()) {
+            POPUP_COLOR_MODE_BLUR -> Modifier.plainBlurBehind(shape).clip(shape).background(tint)
+            POPUP_COLOR_MODE_SOLID_BLACK -> Modifier.clip(shape).background(Color.Black)
+            else -> Modifier.clip(shape).background(CosMediaCard.Fill).background(tint)
+        }
     Column(
         modifier =
             modifier
                 .widthIn(min = 320.dp, max = 400.dp)
-                .clip(shape)
-                .background(CosMediaCard.Fill)
-                .background(tint)
+                .then(fill)
                 .border(1.dp, CosMediaCard.Stroke, shape)
                 .padding(bottom = CosMediaCard.Margin)
     ) {
