@@ -69,7 +69,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.platform.LocalContext
@@ -80,6 +83,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.android.systemui.common.shared.model.Icon as IconModel
@@ -202,7 +206,15 @@ fun StatusBarDynamicIslandChip(
             label = "chipPressScale",
         )
 
-    Row(
+    // COS chips sit centred on the camera; keep their icon and text on either side of it.
+    val cosCameraGap =
+        cutoutSpec.embeddedGapWidth.takeIf {
+            cos && !isMediaChip && cutoutSpec.cutoutCenterX != null
+        }
+
+    CameraSplitRow(
+        leadingCount = viewModel.icons.size,
+        cameraGap = cosCameraGap,
         modifier =
             modifier
                 .then(boundsModifier)
@@ -624,6 +636,74 @@ private fun SwipeHint(color: Color) {
         }
     }
 }
+
+/**
+ * A [Row] that, given a [cameraGap], keeps the first [leadingCount] children before a centred gap
+ * and the rest after it. Both sides take the same width so the gap stays over the camera.
+ */
+@Composable
+private fun CameraSplitRow(
+    leadingCount: Int,
+    cameraGap: Dp?,
+    modifier: Modifier,
+    horizontalArrangement: Arrangement.Horizontal,
+    verticalAlignment: Alignment.Vertical,
+    content: @Composable () -> Unit,
+) {
+    if (cameraGap == null) {
+        Row(
+            modifier = modifier,
+            horizontalArrangement = horizontalArrangement,
+            verticalAlignment = verticalAlignment,
+        ) {
+            content()
+        }
+        return
+    }
+    Layout(content = content, modifier = modifier) { measurables, constraints ->
+        val gapPx = cameraGap.roundToPx()
+        val spacingPx = CameraSplitSpacing.roundToPx()
+        val sideMaxPx = ((constraints.maxWidth - gapPx) / 2).coerceAtLeast(0)
+        fun measureSide(items: List<Measurable>): List<Placeable> {
+            var remaining = sideMaxPx
+            return items.map { item ->
+                item.measure(
+                        Constraints(
+                            maxWidth = remaining.coerceAtLeast(0),
+                            maxHeight = constraints.maxHeight,
+                        )
+                    )
+                    .also { remaining -= it.width + spacingPx }
+            }
+        }
+        fun List<Placeable>.span() =
+            if (isEmpty()) 0 else sumOf { it.width } + spacingPx * (size - 1)
+
+        val leading = measureSide(measurables.take(leadingCount))
+        val trailing = measureSide(measurables.drop(leadingCount))
+        val side = maxOf(leading.span(), trailing.span())
+        val width = (side * 2 + gapPx).coerceIn(constraints.minWidth, constraints.maxWidth)
+        val height =
+            (leading + trailing).maxOfOrNull { it.height }
+                ?.coerceIn(constraints.minHeight, constraints.maxHeight)
+                ?: constraints.minHeight
+        layout(width, height) {
+            var x = 0
+            leading.forEach {
+                it.placeRelative(x, (height - it.height) / 2)
+                x += it.width + spacingPx
+            }
+            x = width
+            trailing.asReversed().forEach {
+                x -= it.width
+                it.placeRelative(x, (height - it.height) / 2)
+                x -= spacingPx
+            }
+        }
+    }
+}
+
+private val CameraSplitSpacing = 8.dp
 
 private val CompactIslandMaxWidth = 192.dp
 private val CompactMediaIslandWidth = 108.dp

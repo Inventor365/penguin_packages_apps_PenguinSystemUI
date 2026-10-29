@@ -19,15 +19,29 @@ import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import com.android.compose.theme.PlatformTheme
+import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.penguin.StatusBarIsland
 import com.android.systemui.res.R
 import com.android.systemui.statusbar.phone.KeyguardStatusBarView
 import com.android.systemui.statusbar.phone.StatusIconContainer
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.StatusBarDynamicIslandContainer
+import com.android.systemui.statusbar.quickactions.popups.ui.compose.dynamicIslandAvoidsAppHandles
 import com.android.systemui.statusbar.quickactions.popups.ui.viewmodel.DynamicIslandChipsViewModelStore
+import com.android.wm.shell.windowdecor.viewholder.AppHandlePositionCallback
+import com.android.wm.shell.windowdecor.viewholder.AppHandles
+import java.util.Optional
+import java.util.concurrent.Executor
 import javax.inject.Inject
 
 class DynamicIsland
@@ -35,6 +49,8 @@ class DynamicIsland
 constructor(
     private val chipsViewModelStore: DynamicIslandChipsViewModelStore,
     private val keyguardViewBinder: KeyguardDynamicIslandViewBinder,
+    private val appHandles: Optional<AppHandles>,
+    @Main private val mainExecutor: Executor,
 ) : StatusBarIsland {
 
     override fun attachKeyguard(statusBar: View) {
@@ -91,11 +107,48 @@ constructor(
                             remember(context.displayId) {
                                 chipsViewModelStore.forDisplay(context.displayId)
                             }
-                        StatusBarDynamicIslandContainer(
-                            chips = islandViewModel.shownPopupChips,
-                            onMediaControlPopupVisibilityChanged = {},
-                            onIslandBoundsChanged = reportBounds,
-                        )
+                        val appHandleBounds by
+                            produceState(emptyList<Rect>(), context.displayId) {
+                                val handles = appHandles.orElse(null) ?: return@produceState
+                                val listener = AppHandlePositionCallback { all ->
+                                    value =
+                                        all.values
+                                            .filter { it.displayId == context.displayId }
+                                            .map { it.rect }
+                                }
+                                handles.addListener(mainExecutor, listener)
+                                awaitDispose { handles.removeListener(listener) }
+                            }
+                        val island = @Composable {
+                            StatusBarDynamicIslandContainer(
+                                chips = islandViewModel.shownPopupChips,
+                                onMediaControlPopupVisibilityChanged = {},
+                                onIslandBoundsChanged = reportBounds,
+                                appHandleBounds = appHandleBounds,
+                            )
+                        }
+                        // A tablet island may step beside an app handle. Span the status bar so
+                        // it stays inside this view and keeps receiving taps; empty space passes
+                        // touches through to the status bar below.
+                        val spanStatusBar = dynamicIslandAvoidsAppHandles()
+                        SideEffect {
+                            val width =
+                                if (spanStatusBar) {
+                                    ViewGroup.LayoutParams.MATCH_PARENT
+                                } else {
+                                    ViewGroup.LayoutParams.WRAP_CONTENT
+                                }
+                            if (layoutParams.width != width) {
+                                layoutParams = layoutParams.apply { this.width = width }
+                            }
+                        }
+                        if (spanStatusBar) {
+                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                island()
+                            }
+                        } else {
+                            island()
+                        }
                     }
                 }
             }

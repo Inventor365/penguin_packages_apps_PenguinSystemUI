@@ -18,6 +18,7 @@ package com.android.systemui.statusbar.quickactions.popups.ui.compose
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -52,7 +53,10 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.android.systemui.penguin.CosFeature
 import com.android.systemui.penguin.rememberCosFeature
@@ -76,9 +80,27 @@ fun StatusBarDynamicIslandContainer(
     chips: List<PopupChipModel.Shown>,
     onMediaControlPopupVisibilityChanged: (Boolean) -> Unit,
     onIslandBoundsChanged: (android.graphics.Rect) -> Unit = {},
+    appHandleBounds: List<android.graphics.Rect> = emptyList(),
     modifier: Modifier = Modifier,
 ) {
     val cutoutSpec = rememberDynamicIslandCutoutSpec()
+    // Tablets show the desktop-windowing app handle at the top centre, where the island sits.
+    // Step the island aside so the handle stays visible and tappable. Phones keep their layout.
+    val avoidAppHandles = dynamicIslandAvoidsAppHandles()
+    var islandBounds by remember { mutableStateOf(Rect.Zero) }
+    val appHandleGapPx = with(LocalDensity.current) { DynamicIslandCompanionGap.toPx() }
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val appHandleShift by
+        animateFloatAsState(
+            targetValue =
+                if (avoidAppHandles) {
+                    appHandleClearance(islandBounds, appHandleBounds, appHandleGapPx, isRtl)
+                } else {
+                    0f
+                },
+            animationSpec = tween(300, easing = FastOutSlowInEasing),
+            label = "islandAppHandleShift",
+        )
     val (_, heightScale) = rememberDynamicIslandSizeScale()
     val cos = rememberCosFeature(CosFeature.Island)
     var selectedChipId by remember { mutableStateOf<PopupChipId?>(null) }
@@ -186,6 +208,14 @@ fun StatusBarDynamicIslandContainer(
                             }
                     } else {
                         Modifier.offset(x = cutoutSpec.horizontalOffset)
+                    }
+                )
+                .then(
+                    if (avoidAppHandles) {
+                        Modifier.onPlaced { islandBounds = it.boundsInWindow() }
+                            .graphicsLayer { translationX = appHandleShift }
+                    } else {
+                        Modifier
                     }
                 )
                 .onGloballyPositioned { coordinates ->
@@ -405,4 +435,37 @@ fun StatusBarDynamicIslandContainer(
             )
         }
     }
+}
+
+private const val TABLET_MIN_WIDTH_DP = 600
+
+/** Whether the island steps aside for app handles: tablets only, phones keep their layout. */
+@Composable
+internal fun dynamicIslandAvoidsAppHandles(): Boolean =
+    LocalConfiguration.current.smallestScreenWidthDp >= TABLET_MIN_WIDTH_DP
+
+/**
+ * How far to move an island at [island] so it clears every app handle it overlaps, stepping
+ * towards the end side and leaving [gapPx] between them. Zero when nothing overlaps.
+ */
+private fun appHandleClearance(
+    island: Rect,
+    appHandles: List<android.graphics.Rect>,
+    gapPx: Float,
+    isRtl: Boolean,
+): Float {
+    if (island.width <= 0f) return 0f
+    var left = island.left
+    repeat(appHandles.size) {
+        val hit =
+            appHandles.firstOrNull {
+                !it.isEmpty &&
+                    it.left < left + island.width &&
+                    it.right > left &&
+                    it.top < island.bottom &&
+                    it.bottom > island.top
+            } ?: return left - island.left
+        left = if (isRtl) hit.left - gapPx - island.width else hit.right + gapPx
+    }
+    return left - island.left
 }
